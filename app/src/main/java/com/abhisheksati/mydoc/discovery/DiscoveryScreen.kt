@@ -131,7 +131,7 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
             }
         }
     }
-    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
+    Column(Modifier.fillMaxSize().navigationBarsPadding().imePadding()) {
         AppTopBar(title=stringResource(R.string.discovery_title),onBack=onBack,isGlass=false)
         Text(stringResource(R.string.discovery_snapshots_disclaimer),Modifier.padding(horizontal=16.dp),style=MaterialTheme.typography.bodySmall)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal=8.dp)) {

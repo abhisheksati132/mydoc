@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -44,8 +45,10 @@ import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.SdCard
 import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import com.abhisheksati.mydoc.R
@@ -61,6 +64,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.Text
@@ -103,6 +109,10 @@ import com.abhisheksati.mydoc.viewmodel.documentTypeCounts
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 private val shortcutCategories = listOf(
     StorageCategoryType.DOCUMENTS,
@@ -249,9 +259,6 @@ fun BrowseHomePane(
         item(key = "browse_storage") {
             StorageOverviewCard(
                 usedRatio = storageUiState.usedRatio,
-                formattedUsed = storageUiState.formattedUsed,
-                formattedTotal = storageUiState.formattedTotal,
-                formattedFree = storageUiState.formattedFree,
                 usedBytes = storageUiState.usedBytes,
                 totalBytes = storageUiState.totalBytes,
                 categories = storageUiState.categories,
@@ -774,9 +781,21 @@ fun DirectoryPane(
                 onAction = if (hasFilters) onClearFilters else null
             )
         } else if (uiState.isGridView) {
-            // The photo gallery is a wall of images: three fixed columns, no gaps, no
-            // metadata, so each picture gets the whole cell instead of a padded card.
+            // The photo gallery is a wall of images: three fixed columns, hairline gutters,
+            // date headers, so each picture gets the cell instead of a padded card.
             val gallery = isImagesCategory
+            val groups = if (gallery) {
+                photoGroupsByDate(
+                    items = displayedItems,
+                    todayLabel = stringResource(R.string.gallery_today),
+                    yesterdayLabel = stringResource(R.string.gallery_yesterday),
+                    weekLabel = stringResource(R.string.gallery_this_week),
+                    monthLabel = stringResource(R.string.gallery_this_month),
+                    earlierLabel = stringResource(R.string.gallery_earlier)
+                )
+            } else {
+                emptyList()
+            }
             LazyVerticalGrid(
                 state = gridState,
                 columns = if (gallery) {
@@ -785,30 +804,52 @@ fun DirectoryPane(
                     GridCells.Adaptive(minSize = 108.dp * LocalDensity.current.fontScale.coerceAtLeast(1f))
                 },
                 contentPadding = if (gallery) {
-                    PaddingValues(bottom = LocalFloatingChromeInset.current + 24.dp)
+                    PaddingValues(start = 2.dp, top = 2.dp, end = 2.dp, bottom = LocalFloatingChromeInset.current + 24.dp)
                 } else {
                     PaddingValues(start = 10.dp, top = 4.dp, end = 10.dp, bottom = LocalFloatingChromeInset.current + 24.dp)
                 },
-                horizontalArrangement = Arrangement.spacedBy(if (gallery) 0.dp else 4.dp),
-                verticalArrangement = Arrangement.spacedBy(if (gallery) 0.dp else 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(if (gallery) 2.dp else 4.dp),
+                verticalArrangement = Arrangement.spacedBy(if (gallery) 2.dp else 4.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(hazeModifier)
             ) {
-                items(displayedItems, key = { it.path }) { item ->
-                    FileGridCell(
-                        item = item,
-                        isSelected = selectedFiles.contains(item.file),
-                        isSelectionMode = inSelectionMode,
-                        onClick = {
-                            if (inSelectionMode) onToggleSelection(item) else onOpenItem(item)
-                        },
-                        onLongClick = { onToggleSelection(item) },
-                        onMoreClick = { onMoreItem(item) },
-                        galleryTile = gallery,
-                        showMoreButton = !isDocumentsCategory,
-                        generateOfficePreview = isDocumentsCategory
-                    )
+                if (gallery) {
+                    groups.forEach { group ->
+                        item(key = "photo_header_${group.key}", span = { GridItemSpan(maxLineSpan) }) {
+                            Text(
+                                text = group.label,
+                                style = AppTheme.typography.overline,
+                                color = AppTheme.colors.inkMuted,
+                                modifier = Modifier.padding(start = 10.dp, top = 16.dp, bottom = 6.dp)
+                            )
+                        }
+                        items(group.photos, key = { it.path }) { item ->
+                            GalleryCell(
+                                item = item,
+                                isSelected = selectedFiles.contains(item.file),
+                                isSelectionMode = inSelectionMode,
+                                onClick = {
+                                    if (inSelectionMode) onToggleSelection(item) else onOpenItem(item)
+                                },
+                                onLongClick = { onToggleSelection(item) }
+                            )
+                        }
+                    }
+                } else {
+                    items(displayedItems, key = { it.path }) { item ->
+                        FileGridCell(
+                            item = item,
+                            isSelected = selectedFiles.contains(item.file),
+                            isSelectionMode = inSelectionMode,
+                            onClick = {
+                                if (inSelectionMode) onToggleSelection(item) else onOpenItem(item)
+                            },
+                            onLongClick = { onToggleSelection(item) },
+                            galleryTile = false,
+                            generateOfficePreview = isDocumentsCategory
+                        )
+                    }
                 }
             }
         } else {
@@ -846,6 +887,100 @@ private fun sortLabel(field: FileSortField): String = when (field) {
     FileSortField.TYPE -> stringResource(R.string.sort_type)
 }
 
+private data class PhotoGroup(val key: String, val label: String, val photos: List<StorageItem>)
+
+/** Photos grouped by arrival period so the wall reads as a timeline. */
+private fun photoGroupsByDate(
+    items: List<StorageItem>,
+    todayLabel: String,
+    yesterdayLabel: String,
+    weekLabel: String,
+    monthLabel: String,
+    earlierLabel: String
+): List<PhotoGroup> {
+    if (items.isEmpty()) return emptyList()
+    val todayStart = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+    val yesterdayStart = (todayStart.clone() as Calendar).apply { add(Calendar.DAY_OF_MONTH, -1) }
+    val weekStart = (todayStart.clone() as Calendar).apply {
+        set(Calendar.DAY_OF_WEEK, firstDayOfWeek)
+    }
+    val monthStart = (todayStart.clone() as Calendar).apply { set(Calendar.DAY_OF_MONTH, 1) }
+    val monthFormat = SimpleDateFormat("LLLL yyyy", Locale.getDefault())
+
+    val buckets = LinkedHashMap<String, MutableList<StorageItem>>()
+    val labels = HashMap<String, String>()
+    items.forEach { item ->
+        val stamp = item.lastModified
+        val key: String
+        val label: String
+        when {
+            stamp <= 0L -> { key = "earlier"; label = earlierLabel }
+            stamp >= todayStart.timeInMillis -> { key = "today"; label = todayLabel }
+            stamp >= yesterdayStart.timeInMillis -> { key = "yesterday"; label = yesterdayLabel }
+            stamp >= weekStart.timeInMillis -> { key = "week"; label = weekLabel }
+            stamp >= monthStart.timeInMillis -> { key = "month"; label = monthLabel }
+            else -> {
+                val calendar = Calendar.getInstance().apply { timeInMillis = stamp }
+                key = "month_${calendar.get(Calendar.YEAR)}_${calendar.get(Calendar.MONTH)}"
+                label = monthFormat.format(Date(stamp))
+            }
+        }
+        buckets.getOrPut(key) { mutableListOf() }.add(item)
+        labels[key] = label
+    }
+    return buckets.map { (key, photos) -> PhotoGroup(key, labels.getValue(key), photos) }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun GalleryCell(
+    item: StorageItem,
+    isSelected: Boolean,
+    isSelectionMode: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .background(scheme.surfaceContainerLow)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+    ) {
+        StorageThumbnail(
+            item = item,
+            modifier = Modifier.fillMaxSize(),
+            contentDescription = item.name,
+            clipToShape = false
+        )
+        if (isSelected) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(scheme.primary.copy(alpha = 0.22f))
+            )
+        }
+        if (isSelectionMode) {
+            Icon(
+                imageVector = if (isSelected) Icons.Rounded.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+                contentDescription = stringResource(if (isSelected) R.string.cd_selected else R.string.cd_not_selected),
+                tint = if (isSelected) scheme.primary else scheme.onSurfaceVariant,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .size(22.dp)
+                    .background(scheme.surface, CircleShape)
+            )
+        }
+    }
+}
+
 
 /**
  * The full storage readout: every category against the used space, plus the
@@ -863,19 +998,25 @@ fun StorageInsightsScreen(
     androidx.compose.material3.Surface(Modifier.fillMaxSize(), color = scheme.background) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .safeDrawingPadding()
+                .fillMaxSize()
+                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, bottom = 28.dp)
         ) {
+            // The bar stays full-bleed so its back affordance lines up with the file browser;
+            // only the content is inset to the 16 dp screen margin.
             com.abhisheksati.mydoc.designsystem.components.AppTopBar(
                 title = stringResource(R.string.storage_insights),
                 subtitle = stringResource(R.string.storage_insights_subtitle),
                 onBack = onDismiss,
-                contentInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
                 isGlass = false,
                 containerColor = scheme.background
             )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 28.dp)
+            ) {
+            Spacer(Modifier.height(8.dp))
             Spacer(Modifier.height(8.dp))
             if (storageUiState.totalBytes > 0) {
                 StorageBreakdown(storageUiState = storageUiState)
@@ -919,6 +1060,7 @@ fun StorageInsightsScreen(
                         color = scheme.onSurfaceVariant
                     )
                 }
+            }
             }
         }
     }

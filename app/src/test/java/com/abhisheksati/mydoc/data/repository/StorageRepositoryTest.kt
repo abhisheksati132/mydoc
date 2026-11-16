@@ -31,11 +31,9 @@ class StorageRepositoryTest {
         assertTrue(testDir.exists())
         assertTrue(testDir.isDirectory)
 
-        // 2. Create File
-        val fileRes = repo.createFile(testDir, "test.txt")
-        assertTrue(fileRes.isSuccess)
-        val testFile = fileRes.getOrThrow()
-        assertTrue(testFile.exists())
+        // 2. File fixture
+        val testFile = File(testDir, "test.txt")
+        assertTrue(testFile.createNewFile())
         testFile.writeText("Hello MyDoc File Manager")
 
         // 3. Rename File
@@ -137,12 +135,9 @@ class StorageRepositoryTest {
         assertTrue(repo.createDirectory(root, "invalid:name").isFailure)
         assertTrue(repo.createDirectory(root, "invalid*name").isFailure)
         assertTrue(repo.createDirectory(root, "invalid?name").isFailure)
-        assertTrue(repo.createFile(root, "invalid\"name.txt").isFailure)
-        assertTrue(repo.createFile(root, "invalid<name.txt").isFailure)
-        assertTrue(repo.createFile(root, "invalid|name.txt").isFailure)
-        assertTrue(repo.createFile(root, "").isFailure)
-        assertTrue(repo.createFile(root, ".").isFailure)
-        assertTrue(repo.createFile(root, "..").isFailure)
+        assertTrue(repo.createDirectory(root, "").isFailure)
+        assertTrue(repo.createDirectory(root, ".").isFailure)
+        assertTrue(repo.createDirectory(root, "..").isFailure)
     }
 
     @Test

@@ -9,4 +9,12 @@
     <color name="splash_rule_one">#0E5C57</color>
     <color name="splash_rule_two">#A67C3D</color>
     <color name="splash_rule_three">#6B6558</color>
+
+    <!-- Continue Reading widget (Ink & Seal, day) -->
+    <color name="widget_surface">#FCFBF8</color>
+    <color name="widget_row">#F3F0E9</color>
+    <color name="widget_line">#E4DFD4</color>
+    <color name="widget_ink">#1A1712</color>
+    <color name="widget_ink_muted">#6B6558</color>
+    <color name="widget_accent">#0E5C57</color>
 </resources>

@@ -30,7 +30,6 @@ data class HomeUiState(
     val searchQuery: String = "",
     val documents: List<DocumentFile> = emptyList(),
     val recents: List<DocumentFile> = emptyList(),
-    val inboxItems: List<LibraryItem> = emptyList(),
     val continueItems: List<LibraryItem> = emptyList(),
     val libraryItems: List<LibraryItem> = emptyList(),
     val recentLibraryItems: List<LibraryItem> = emptyList(),
@@ -47,9 +46,6 @@ private data class DocumentFilters(
     val sortOrder: DocumentSortOrder,
     val errorMessage: String? = null
 )
-
-private const val INBOX_WINDOW_MS = 14L * 86_400_000L
-private const val INBOX_LIMIT = 6
 
 /** Selection survives only for rows still visible in recents; the hero card is not a recent row. */
 internal fun pruneRecentSelection(selected: Set<String>, recents: List<LibraryItem>, heroUri: String?): Set<String> {
@@ -133,20 +129,10 @@ class HomeViewModel(
             .sortedByDescending { it.lastModified }
             .take(20)
 
-        // Smart inbox: documents that arrived recently and are still unfiled (not favourited).
-        val inboxCutoff = System.currentTimeMillis() - INBOX_WINDOW_MS
-        val inboxItems = allLibraryItems
-            .asSequence()
-            .filter { it.kind == MediaKind.DOCUMENT && !it.isFavorite && it.lastModified >= inboxCutoff }
-            .sortedByDescending { it.lastModified }
-            .take(INBOX_LIMIT)
-            .toList()
-
         HomeUiState(
             searchQuery = query,
             documents = sortedDocs,
             recents = recents,
-            inboxItems = inboxItems,
             continueItems = continueItems,
             libraryItems = filteredLibItems,
             recentLibraryItems = dynamicRecents,

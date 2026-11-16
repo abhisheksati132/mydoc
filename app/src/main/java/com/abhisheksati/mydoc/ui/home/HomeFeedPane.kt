@@ -128,8 +128,7 @@ fun HomeFeedPane(
     isLoading: Boolean = false,
     onDismissError: (() -> Unit)? = null,
     hazeState: HazeState? = null,
-    listState: LazyListState = rememberLazyListState(),
-    inboxItems: List<LibraryItem> = emptyList()
+    listState: LazyListState = rememberLazyListState()
 ) {
     val colors = AppTheme.colors
     val haptics = rememberAppHaptics()
@@ -340,39 +339,6 @@ fun HomeFeedPane(
                 }
             }
 
-            // SMART INBOX: recent arrivals that have not been filed yet
-            if (inboxItems.isNotEmpty()) {
-                item(key = "inbox_header") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = AppSpacing.small),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.inbox_title),
-                                style = AppTheme.typography.overline,
-                                color = colors.accent
-                            )
-                            Text(
-                                text = stringResource(R.string.inbox_subtitle, inboxItems.size),
-                                style = AppTheme.typography.metadata,
-                                color = colors.inkSecondary
-                            )
-                        }
-                        TextButton(onClick = onNavigateToLibrary) {
-                            Text(stringResource(R.string.inbox_browse))
-                        }
-                    }
-                }
-                items(inboxItems, key = { "inbox_${it.uri}" }) { item ->
-                    InboxRow(
-                        item = item,
-                        onClick = { haptics.click(); onLibraryItemClick(item) },
-                        onLongClick = { haptics.snap(); onLibraryItemDetails(item) }
-                    )
-                }
-            }
-
             // RECENT DOCUMENTS SECTION
             if (remainingRecents.isNotEmpty()) {
                 item(key = "recents_header") {
@@ -457,54 +423,6 @@ fun HomeFeedPane(
                 onRemove = { onRemoveSelectedRecents(selectedRecents) }
             )
         }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun InboxRow(
-    item: LibraryItem,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit
-) {
-    val colors = AppTheme.colors
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(AppRadius.cardShape)
-            .background(colors.surface)
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(colors.surfaceMuted)
-        ) {
-            LibraryThumbnail(item = item, modifier = Modifier.fillMaxSize())
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = item.name,
-                style = AppTheme.typography.titleSmall,
-                color = colors.ink,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = item.formattedSize,
-                style = AppTheme.typography.metadata,
-                color = colors.inkSecondary
-            )
-        }
-        Icon(
-            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-            contentDescription = null,
-            tint = colors.inkSecondary
-        )
     }
 }
 

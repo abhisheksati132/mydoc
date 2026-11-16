@@ -3,6 +3,23 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [2.0.13] — 2026-11-16
+
+### Less noise, more paper
+- **Continue reading widget, redrawn**: the widget now matches the app — a paper surface with a seal-teal header, document title with page and size, a progress bar, a recency label, and a "Resume" cue. Rows deep-link to the exact document, and a launcher preview is included.
+- **Images are a real gallery**: strict square tiles, hairline gutters, no card chrome, grouped under Today, Yesterday, Earlier this week, Earlier this month, and Undated.
+- **One header everywhere**: Insights, Recycle Bin, Cleaner, App manager, and folder browsing now place the back arrow at the same position, and duplicated status/navigation insets are gone.
+- **Leaner menus**: the storage overflow is five labelled rows with icons and no dividers, per-tile three-dot buttons are removed from grids, and the duplicate list/grid menu item is gone.
+- **Quieter Library**: the storage card keeps its capacity bar but drops the used/free numbers that Folder insights already reports.
+
+### Removed
+- **New text file**: the dialog and its code path produced files that could not be opened or edited, so the feature and its strings are gone. The + button is now only New folder.
+- **Inbox**: it duplicated Recent files; Home leads with Continue reading and Recent files again.
+- The "Files > Category" breadcrumb, which repeated the app-bar title.
+
+### Fixed
+- **White-on-white plus button** in light mode: the FAB now draws its glyph with the on-accent color.
+
 ## [2.0.12] — 2026-11-15
 
 ### Read it, find it, hear it

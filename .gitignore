@@ -20,6 +20,7 @@ context.md
 .agents/
 .claude/
 agent/
+.device/
 skills-lock.json
 coverage-ui.json
 .coverage

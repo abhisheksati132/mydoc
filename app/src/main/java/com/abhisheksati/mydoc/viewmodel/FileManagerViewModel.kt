@@ -554,19 +554,6 @@ class FileManagerViewModel(
         }
     }
 
-    fun createNewFile(name: String) {
-        if (_uiState.value.activeOperation != null) return
-        viewModelScope.launch {
-            val result = storageRepository.createFile(_uiState.value.currentDirectory, name)
-            result.onSuccess {
-                _uiState.update { it.copy(userMessage = UiText.Res(R.string.fm_file_created, listOf(name))) }
-                reloadCurrentSource()
-            }.onFailure { err ->
-                _uiState.update { it.copy(userMessage = UserMessages.actionFailed(R.string.fm_verb_create_file, err)) }
-            }
-        }
-    }
-
     fun renameItem(file: File, newName: String) {
         if (_uiState.value.activeOperation != null) return
         viewModelScope.launch {

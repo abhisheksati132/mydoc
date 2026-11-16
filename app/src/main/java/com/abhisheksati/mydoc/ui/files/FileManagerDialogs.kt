@@ -124,66 +124,6 @@ fun NewFolderDialog(
 }
 
 @Composable
-fun NewFileDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (name: String) -> Unit
-) {
-    val defaultFileName = stringResource(R.string.dialog_new_file_default)
-    var name by rememberSaveable { mutableStateOf(defaultFileName) }
-    val focusRequester = remember { FocusRequester() }
-    val colors = LocalAppColors.current
-    val isOled = LocalIsOled.current
-
-    AppAlertDialog(
-        onDismissRequest = onDismiss,
-        shape = AppRadius.modalShape,
-        containerColor = if (isOled) colors.surfaceContainerHigh else colors.surface,
-        modifier = Modifier.border(
-            BorderStroke(0.8.dp, if (isOled) Color.White.copy(alpha = 0.08f) else colors.divider.copy(alpha = 0.5f)),
-            AppRadius.modalShape
-        ),
-        title = { Text(stringResource(R.string.dialog_new_file), color = colors.textPrimary) },
-        text = {
-            OverlaySystemBars()
-            Column {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    placeholder = { Text(stringResource(R.string.dialog_file_name_hint)) },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = colors.textPrimary,
-                        unfocusedTextColor = colors.textPrimary,
-                        focusedBorderColor = colors.accent,
-                        unfocusedBorderColor = colors.divider
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(focusRequester)
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    if (name.trim().isNotEmpty()) {
-                        onConfirm(name.trim())
-                    }
-                },
-                enabled = name.trim().isNotEmpty()
-            ) {
-                Text(stringResource(R.string.action_create), color = if (name.trim().isNotEmpty()) colors.accent else colors.textSecondary)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel), color = colors.textSecondary)
-            }
-        }
-    )
-}
-
-@Composable
 fun RenameDialog(
     file: File,
     onDismiss: () -> Unit,

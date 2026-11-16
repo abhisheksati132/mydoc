@@ -129,15 +129,12 @@ fun FilesSectionHeader(
 
 /**
  * The Library's storage hero: used space against capacity as one segmented bar
- * (each slice is a category, so the bar already says *what* is using the disk),
- * with Insights, Recycle Bin, and Clean as first-class actions rather than links.
+ * (each slice is a category, so the bar already says *what* is using the disk).
+ * Exact figures live in Insights; this card stays a visual entry point.
  */
 @Composable
 fun StorageOverviewCard(
     usedRatio: Float,
-    formattedUsed: String,
-    formattedTotal: String,
-    formattedFree: String,
     usedBytes: Long,
     totalBytes: Long,
     categories: List<StorageCategoryStat>,
@@ -151,7 +148,6 @@ fun StorageOverviewCard(
     val colors = AppTheme.colors
     val accent = colors.accent
     val shape = AppRadius.xLargeShape
-    val usedPercent = (usedRatio * 100f).toInt().coerceIn(0, 100)
     val sweep by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (usedRatio > 0f) 1f else 0f,
         animationSpec = androidx.compose.animation.core.tween(
@@ -176,6 +172,10 @@ fun StorageOverviewCard(
             .padding(18.dp)
     ) {
         Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(AppRadius.insetShape)
+                .clickable(role = Role.Button, onClick = onBrowse),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
@@ -194,45 +194,6 @@ fun StorageOverviewCard(
                 color = scheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
-            Surface(shape = AppRadius.pillShape, color = accent.copy(alpha = 0.14f)) {
-                Text(
-                    text = stringResource(R.string.storage_percent_full, usedPercent),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = accent,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                )
-            }
-        }
-
-        Spacer(Modifier.height(14.dp))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(AppRadius.insetShape)
-                .clickable(role = Role.Button, onClick = onBrowse)
-                .padding(vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = formattedUsed.ifEmpty { "—" },
-                    // Tabular figures keep the number from shifting while scans refresh, and
-                    // the display size gives the card its editorial centre of gravity.
-                    style = AppTheme.typography.display.copy(
-                        fontFeatureSettings = "tnum",
-                        letterSpacing = (-1).sp
-                    ),
-                    fontWeight = FontWeight.Bold,
-                    color = scheme.onSurface
-                )
-                Text(
-                    text = stringResource(R.string.storage_used_of_total, formattedTotal.ifEmpty { "—" }),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = scheme.onSurfaceVariant
-                )
-            }
             Icon(
                 Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                 contentDescription = null,
@@ -250,17 +211,6 @@ fun StorageOverviewCard(
                 .fillMaxWidth()
                 .height(14.dp)
         )
-
-        Spacer(Modifier.height(10.dp))
-
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Box(Modifier.size(8.dp).clip(CircleShape).background(colors.divider))
-            Text(
-                text = stringResource(R.string.storage_free_line, formattedFree.ifEmpty { "—" }),
-                style = MaterialTheme.typography.labelMedium,
-                color = scheme.onSurfaceVariant
-            )
-        }
 
         Spacer(Modifier.height(16.dp))
 
@@ -659,10 +609,8 @@ fun FileGridCell(
     isSelectionMode: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    onMoreClick: () -> Unit,
     modifier: Modifier = Modifier,
     galleryTile: Boolean = false,
-    showMoreButton: Boolean = true,
     generateOfficePreview: Boolean = false
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -720,7 +668,8 @@ fun FileGridCell(
                     item = item,
                     modifier = Modifier.fillMaxSize(),
                     contentDescription = if (galleryTile) item.name else null,
-                    generateOfficePreview = generateOfficePreview
+                    generateOfficePreview = generateOfficePreview,
+                    clipToShape = !galleryTile
                 )
                 if (isSelected) {
                     Box(
@@ -741,12 +690,6 @@ fun FileGridCell(
                         .padding(6.dp)
                         .size(22.dp)
                         .background(scheme.surface, CircleShape)
-                )
-            } else if (!galleryTile && showMoreButton) {
-                FileOverflowButton(
-                    contentDescription = stringResource(R.string.more_options_for_file, item.name),
-                    onClick = onMoreClick,
-                    modifier = Modifier.align(Alignment.TopEnd)
                 )
             }
         }

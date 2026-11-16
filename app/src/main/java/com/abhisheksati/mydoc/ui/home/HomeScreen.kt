@@ -245,7 +245,6 @@ fun HomeScreen(
                                 onSettingsClick = onSettingsClick,
                                 onScanClick = { documentScanner() },
                                 onNavigateToLibrary = { viewModel.selectTab(HomeTab.LIBRARY) },
-                                inboxItems = uiState.inboxItems,
                                 errorMessage = uiState.errorMessage,
                                 isLoading = uiState.isLoading,
                                 onDismissError = { viewModel.clearError() },

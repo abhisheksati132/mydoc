@@ -14,7 +14,6 @@ interface StorageRepository {
     suspend fun getStorageVolumes(): List<StorageVolume>
     suspend fun listDirectory(directory: File, showHidden: Boolean, sortOrder: FileSortOrder): List<StorageItem>
     suspend fun createDirectory(parent: File, name: String): Result<File>
-    suspend fun createFile(parent: File, name: String): Result<File>
     suspend fun rename(source: File, newName: String): Result<File>
     suspend fun delete(files: List<File>): Result<Int>
     suspend fun copy(sources: List<File>, targetDir: File, onProgress: (current: Int, total: Int) -> Unit = { _, _ -> }): Result<Int>

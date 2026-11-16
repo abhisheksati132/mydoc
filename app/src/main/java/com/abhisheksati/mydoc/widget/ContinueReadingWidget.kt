@@ -40,6 +40,8 @@ class ContinueReadingWidget : AppWidgetProvider() {
         return RemoteViews(context.packageName, R.layout.widget_continue_reading).apply {
             val emptyVisible = if (recents.isEmpty()) View.VISIBLE else View.GONE
             setViewVisibility(R.id.widget_empty, emptyVisible)
+            // Tapping the frame's dead space opens the app; the rows carry their own links.
+            setOnClickPendingIntent(R.id.widget_root, launchIntent(context))
             ROW_IDS.forEachIndexed { index, rowId ->
                 val doc = recents.getOrNull(index)
                 if (doc == null) {
@@ -61,6 +63,18 @@ class ContinueReadingWidget : AppWidgetProvider() {
         }
     }
 
+    private fun launchIntent(context: Context): PendingIntent {
+        val intent = Intent(context, MainActivity::class.java)
+            .setAction(Intent.ACTION_MAIN)
+            .addCategory(Intent.CATEGORY_LAUNCHER)
+        return PendingIntent.getActivity(
+            context,
+            99,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
     private fun rowIntent(context: Context, index: Int): PendingIntent {
         val intent = Intent(context, MainActivity::class.java)
             .setAction(MainActivity.ACTION_OPEN_RECENT)
@@ -75,9 +89,9 @@ class ContinueReadingWidget : AppWidgetProvider() {
 
     companion object {
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        private val ROW_IDS = intArrayOf(R.id.widget_row_0, R.id.widget_row_1, R.id.widget_row_2)
-        private val titleIds = intArrayOf(R.id.widget_row_0_title, R.id.widget_row_1_title, R.id.widget_row_2_title)
-        private val subtitleIds = intArrayOf(R.id.widget_row_0_subtitle, R.id.widget_row_1_subtitle, R.id.widget_row_2_subtitle)
+        private val ROW_IDS = intArrayOf(R.id.widget_row_0, R.id.widget_row_1)
+        private val titleIds = intArrayOf(R.id.widget_row_0_title, R.id.widget_row_1_title)
+        private val subtitleIds = intArrayOf(R.id.widget_row_0_subtitle, R.id.widget_row_1_subtitle)
 
         /** Repaint every placed widget after recents or reading progress change. */
         fun refresh(context: Context) {

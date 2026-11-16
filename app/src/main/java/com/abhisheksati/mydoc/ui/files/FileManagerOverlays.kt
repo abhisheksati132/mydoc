@@ -22,8 +22,6 @@ fun FileManagerOverlays(
     pinnedFoldersManager: PinnedFoldersManager,
     showNewFolderDialog: Boolean,
     onDismissNewFolder: () -> Unit,
-    showNewFileDialog: Boolean,
-    onDismissNewFile: () -> Unit,
     showRenameDialogForFile: File?,
     onDismissRename: () -> Unit,
     showDeleteConfirmDialog: Boolean,
@@ -63,16 +61,6 @@ fun FileManagerOverlays(
             onConfirm = { name ->
                 onDismissNewFolder()
                 viewModel.createNewFolder(name)
-            }
-        )
-    }
-
-    if (showNewFileDialog) {
-        NewFileDialog(
-            onDismiss = onDismissNewFile,
-            onConfirm = { name ->
-                onDismissNewFile()
-                viewModel.createNewFile(name)
             }
         )
     }

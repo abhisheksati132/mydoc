@@ -179,12 +179,13 @@ fun StorageThumbnail(
     item: StorageItem,
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
-    generateOfficePreview: Boolean = false
+    generateOfficePreview: Boolean = false,
+    clipToShape: Boolean = true
 ) {
     val context = LocalContext.current
     when {
         item.fileType == StorageFileType.IMAGE -> Box(
-            modifier = modifier.clip(AppRadius.insetShape)
+            modifier = if (clipToShape) modifier.clip(AppRadius.insetShape) else modifier
         ) {
             AsyncImage(
                 model = item.file,

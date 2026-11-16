@@ -26,15 +26,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.NoteAdd
-import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.outlined.DeleteSweep
-import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.DonutLarge
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Visibility
@@ -43,16 +41,17 @@ import androidx.compose.material3.DropdownMenuItem
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppDropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
-import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.draw.shadow
+import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
@@ -155,7 +154,6 @@ fun FilesPaneScreen(
 
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
     var showNewFolderDialog by rememberSaveable { mutableStateOf(false) }
-    var showNewFileDialog by rememberSaveable { mutableStateOf(false) }
     var renameTarget by rememberSaveable(stateSaver = FilePathSaver) { mutableStateOf<File?>(null) }
     var showAdvancedSearch by rememberSaveable { mutableStateOf(false) }
     var showSaveSearch by rememberSaveable { mutableStateOf(false) }
@@ -342,10 +340,9 @@ fun FilesPaneScreen(
 
     val breadcrumbs: List<Pair<String, () -> Unit>> = when {
         !insideBrowse -> emptyList()
-        activeCategory != null -> listOf(
-            stringResource(R.string.files_crumb_files) to { viewModel.selectCategory(null) },
-            activeCategory.displayName to {}
-        )
+        // A category screen already names itself in the app bar; a "Files > Images" trail
+        // would only repeat the title that back already leaves.
+        activeCategory != null -> emptyList()
         else -> uiState.breadcrumbTrail.mapIndexed { index, crumb ->
             val volume = uiState.storageVolumes.firstOrNull { it.path == crumb.absolutePath }
             val label = when {
@@ -441,13 +438,9 @@ fun FilesPaneScreen(
                             onSettingsClick = onSettingsClick,
                             workspaceInsets = workspaceInsets,
                             workspaceMenu = workspaceMenu,
-                            onAdvancedSearch = { showAdvancedSearch = true },
                             onFolderInsights = { showFolderInsights = true },
                             onResetFolderView = viewModel::resetFolderView,
-                            onToggleView = { viewModel.toggleViewMode() },
                             onToggleHidden = { viewModel.toggleHiddenFiles() },
-                            onNewFolder = { showNewFolderDialog = true },
-                            onNewFile = { showNewFileDialog = true },
                             onOpenTrash = { viewModel.openTrash() },
                             onRefresh = {
                                 viewModel.refreshCurrentSource()
@@ -588,11 +581,15 @@ fun FilesPaneScreen(
                 horizontalAlignment = Alignment.End
             ) {
                 if (isBrowsingFolder && !uiState.isSelectionMode && uiState.clipboardState == null) {
-                    GlassSurface(shape = RoundedCornerShape(28.dp), hazeState = hazeState, motion = glassMotion) {
-                        IconButton(onClick = { showNewFolderDialog = true }, modifier = Modifier.size(56.dp)) {
-                            Icon(Icons.Outlined.Add, tint = MaterialTheme.colorScheme.onSurface,
-                                contentDescription = stringResource(R.string.action_new_folder))
-                        }
+                    IconButton(
+                        onClick = { showNewFolderDialog = true },
+                        modifier = Modifier.size(56.dp).shadow(10.dp, CircleShape),
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = AppTheme.colors.accent,
+                            contentColor = AppTheme.colors.onAccent
+                        )
+                    ) {
+                        Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.action_new_folder))
                     }
                 }
                 SnackbarHost(hostState = snackbarHostState) { data ->
@@ -624,8 +621,6 @@ fun FilesPaneScreen(
         pinnedFoldersManager = pinnedFoldersManager,
         showNewFolderDialog = showNewFolderDialog,
         onDismissNewFolder = { showNewFolderDialog = false },
-        showNewFileDialog = showNewFileDialog,
-        onDismissNewFile = { showNewFileDialog = false },
         showRenameDialogForFile = renameTarget,
         onDismissRename = { renameTarget = null },
         showDeleteConfirmDialog = showDeleteConfirm,
@@ -715,15 +710,11 @@ private fun FilesHeader(
     onBack: () -> Unit,
     onSearch: () -> Unit,
     onSettingsClick: () -> Unit,
-    onToggleView: () -> Unit,
     onToggleHidden: () -> Unit,
-    onNewFolder: () -> Unit,
-    onNewFile: () -> Unit,
     onOpenTrash: () -> Unit,
     onRefresh: () -> Unit,
     workspaceInsets: Boolean = false,
     onPageVisibilityChange: (Boolean) -> Unit = {},
-    onAdvancedSearch: () -> Unit = {},
     onFolderInsights: () -> Unit = {},
     onResetFolderView: () -> Unit = {},
     workspaceMenu: @Composable androidx.compose.foundation.layout.ColumnScope.(() -> Unit) -> Unit = {}
@@ -761,27 +752,14 @@ private fun FilesHeader(
                     Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.cd_more_options), tint = scheme.onSurface)
                 }
                 AppDropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    if (isInsideFolder) {
-                    HorizontalDivider()
                     if (uiState.isBrowsingStorage && uiState.activeCategory == null) DropdownMenuItem(
                         text = { Text(stringResource(R.string.folder_insights_title)) },
+                        leadingIcon = { Icon(Icons.Outlined.DonutLarge, contentDescription = null) },
                         onClick = { menuOpen = false; onFolderInsights() })
                     if (uiState.isBrowsingStorage && uiState.activeCategory == null) DropdownMenuItem(
-                        text = { Text(stringResource(R.string.folder_view_reset)) }, onClick = { menuOpen = false; onResetFolderView() })
-                    DropdownMenuItem(text = { Text(stringResource(R.string.explorer_advanced_search)) }, onClick = { menuOpen = false; onAdvancedSearch() })
-                    DropdownMenuItem(
-                        text = { Text(stringResource(if (uiState.isGridView) R.string.menu_list_view else R.string.menu_grid_view)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = if (uiState.isGridView) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
-                                contentDescription = null
-                            )
-                        },
-                        onClick = {
-                            menuOpen = false
-                            onToggleView()
-                        }
-                    )
+                        text = { Text(stringResource(R.string.folder_view_reset)) },
+                        leadingIcon = { Icon(Icons.Outlined.RestartAlt, contentDescription = null) },
+                        onClick = { menuOpen = false; onResetFolderView() })
                     DropdownMenuItem(
                         text = { Text(stringResource(if (uiState.showHiddenFiles) R.string.menu_hide_hidden else R.string.menu_show_hidden)) },
                         leadingIcon = {
@@ -795,26 +773,6 @@ private fun FilesHeader(
                             onToggleHidden()
                         }
                     )
-                    if (uiState.isBrowsingStorage && uiState.activeCategory == null) {
-                        HorizontalDivider()
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_new_folder)) },
-                            leadingIcon = { Icon(Icons.Outlined.CreateNewFolder, contentDescription = null) },
-                            onClick = {
-                                menuOpen = false
-                                onNewFolder()
-                            }
-                        )
-                    }
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_new_file)) },
-                        leadingIcon = { Icon(Icons.AutoMirrored.Outlined.NoteAdd, contentDescription = null) },
-                        onClick = {
-                            menuOpen = false
-                            onNewFile()
-                        }
-                    )
-                    HorizontalDivider()
                     DropdownMenuItem(
                         text = {
                             Text(
@@ -835,7 +793,6 @@ private fun FilesHeader(
                             onRefresh()
                         }
                     )
-                    }
                 }
             }
 

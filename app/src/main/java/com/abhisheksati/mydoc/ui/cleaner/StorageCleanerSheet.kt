@@ -154,8 +154,7 @@ fun StorageCleanerScreen(
         color = colors.background
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().safeDrawingPadding()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+            modifier = Modifier.fillMaxSize()
         ) {
             com.abhisheksati.mydoc.designsystem.components.AppTopBar(
                 title = stringResource(R.string.cleaner_title),
@@ -166,11 +165,19 @@ fun StorageCleanerScreen(
                         Text(stringResource(R.string.cleaner_rescan))
                     }
                 },
-                contentInsets = WindowInsets(0, 0, 0, 0),
                 isGlass = false,
                 containerColor = colors.background
             )
 
+            // The bar is full-bleed; the 16 dp screen margin lives on the content below it so
+            // the back arrow sits where every other screen puts it.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp)
+            ) {
             Spacer(modifier = Modifier.height(16.dp))
 
             if (scanFailed) {
@@ -571,8 +578,7 @@ fun StorageCleanerScreen(
                         tonalElevation = 8.dp,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                            .padding(vertical = 10.dp)
                     ) {
                         Button(
                             onClick = { showConfirm = true },
@@ -614,6 +620,7 @@ fun StorageCleanerScreen(
                         }
                     }
                 }
+            }
             }
         }
 

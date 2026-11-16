@@ -98,18 +98,25 @@ fun AppManagerScreen(
         color = colors.background
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().safeDrawingPadding()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+            modifier = Modifier.fillMaxSize()
         ) {
             com.abhisheksati.mydoc.designsystem.components.AppTopBar(
                 title = stringResource(R.string.files_category_apps),
                 subtitle = if (tab == 2) stringResource(R.string.files_subtitle_many, filteredApks.size) else stringResource(R.string.app_count_found, filteredApps.size),
                 onBack = onDismiss,
-                contentInsets = WindowInsets(0, 0, 0, 0),
                 isGlass = false,
                 containerColor = colors.background
             )
 
+            // Full-bleed bar, inset content: the back arrow lands on the same column as the
+            // file browser instead of 16 dp further in.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp)
+            ) {
             Spacer(modifier = Modifier.height(12.dp))
 
             // Search Bar & Filters
@@ -204,8 +211,7 @@ fun AppManagerScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f)
-                        .navigationBarsPadding(),
+                        .weight(1f),
                     contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -245,6 +251,7 @@ fun AppManagerScreen(
                         )
                     }
                 }
+            }
             }
         }
     }

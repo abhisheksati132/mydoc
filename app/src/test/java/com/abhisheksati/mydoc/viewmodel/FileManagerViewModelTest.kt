@@ -673,9 +673,6 @@ class FileManagerViewModelTest {
         override suspend fun createDirectory(parent: File, name: String): Result<File> =
             Result.success(File(parent, name))
 
-        override suspend fun createFile(parent: File, name: String): Result<File> =
-            Result.success(File(parent, name))
-
         override suspend fun rename(source: File, newName: String): Result<File> =
             Result.success(File(source.parentFile, newName))
 

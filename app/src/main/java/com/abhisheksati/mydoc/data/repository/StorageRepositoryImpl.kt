@@ -258,28 +258,6 @@ class StorageRepositoryImpl(
         }
     }
 
-    override suspend fun createFile(parent: File, name: String): Result<File> = withContext(Dispatchers.IO) {
-        mutationLock.withLock {
-            try {
-                val cleanName = name.trim()
-                if (cleanName.isEmpty()) return@withContext Result.failure(IllegalArgumentException("Name cannot be empty"))
-                if (!isValidFileName(cleanName)) return@withContext Result.failure(IllegalArgumentException("Name contains invalid characters"))
-                val target = File(parent, cleanName)
-                if (target.exists()) {
-                    return@withContext Result.failure(IllegalStateException("File already exists"))
-                }
-                if (target.createNewFile()) {
-                    Result.success(target)
-                } else {
-                    Result.failure(Exception("Failed to create file"))
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Result.failure(e)
-            }
-        }
-    }
-
     override suspend fun rename(source: File, newName: String): Result<File> = withContext(Dispatchers.IO) {
         mutationLock.withLock {
             try {
