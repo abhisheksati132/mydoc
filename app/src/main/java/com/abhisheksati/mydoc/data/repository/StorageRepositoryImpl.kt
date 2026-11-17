@@ -302,6 +302,15 @@ class StorageRepositoryImpl(
         return Files.notExists(path, NOFOLLOW_LINKS)
     }
 
+    /** Puts a REPLACE backup back in place after a failed extraction. */
+    private fun restoreReplacedFile(backup: File, original: File) {
+        if (!backup.exists()) return
+        if (!backup.renameTo(original)) {
+            backup.copyTo(original, overwrite = true)
+            backup.delete()
+        }
+    }
+
     private suspend fun deleteTrashEntry(entry: File): Boolean {
         val root = getTrashDir(create = false).canonicalFile
         if (entry.parentFile?.canonicalFile != root || entry.name in setOf(".", "..")) return false
@@ -495,11 +504,39 @@ class StorageRepositoryImpl(
         )
     }
 
+    /**
+     * java.io.File resolves symbolic links, so a plain recursive walk treats a link to a directory
+     * as part of the selected tree. Copying or deleting through it reaches content outside what the
+     * user selected. These helpers yield links as leaves; callers act on the link entry itself.
+     */
+    private fun File.isSymbolicLinkEntry(): Boolean =
+        runCatching { Files.isSymbolicLink(toPath()) }.getOrDefault(false)
+
+    private fun File.walkNoFollow(maxDepth: Int = Int.MAX_VALUE): Sequence<File> = sequence {
+        yield(this@walkNoFollow)
+        if (maxDepth <= 0 || isSymbolicLinkEntry() || !isDirectory) return@sequence
+        listFiles()?.forEach { child -> yieldAll(child.walkNoFollow(maxDepth - 1)) }
+    }
+
+    private fun File.walkNoFollowPostOrder(): List<File> {
+        val result = mutableListOf<File>()
+        fun visit(node: File) {
+            if (!node.isSymbolicLinkEntry() && node.isDirectory) {
+                node.listFiles()?.forEach(::visit)
+            }
+            result += node
+        }
+        visit(this)
+        return result
+    }
+
     /** Bytes the sources will occupy. Checked before writing: a copy that dies at 98% full
      *  leaves a truncated file the user cannot tell from a complete one. */
     private fun totalBytesOf(sources: List<File>): Long = sources.sumOf { src ->
         if (!src.exists()) 0L
-        else if (src.isDirectory) src.walkTopDown().filter { it.isFile }.map { it.length() }.sum()
+        else if (src.isDirectory && !src.isSymbolicLinkEntry()) {
+            src.walkNoFollow().filter { it.isFile && !it.isSymbolicLinkEntry() }.sumOf { it.length() }
+        } else if (src.isSymbolicLinkEntry()) 0L
         else src.length()
     }
 
@@ -508,8 +545,11 @@ class StorageRepositoryImpl(
 
     /** Remove whatever a failed write left behind, so a partial file is never mistaken for the item. */
     private fun discardPartial(dest: File) {
-        if (dest.isDirectory) dest.walkBottomUp().forEach { entryMutator.delete(it) }
-        else entryMutator.delete(dest)
+        if (dest.isDirectory && !dest.isSymbolicLinkEntry()) {
+            dest.walkNoFollowPostOrder().forEach { entryMutator.delete(it) }
+        } else {
+            entryMutator.delete(dest)
+        }
     }
 
     /**
@@ -519,9 +559,16 @@ class StorageRepositoryImpl(
      * complete copy that exists.
      */
     private fun snapshotSource(root: File): Map<String, Long> {
-        if (!root.isDirectory) return mapOf("" to if (root.isFile) root.length() else -1L)
-        return root.walkTopDown().associate { node ->
-            node.relativeTo(root).path to if (node.isDirectory) -1L else node.length()
+        if (!root.isDirectory || root.isSymbolicLinkEntry()) {
+            return mapOf("" to if (root.isFile || root.isSymbolicLinkEntry()) root.length() else -1L)
+        }
+        return root.walkNoFollow().associate { node ->
+            val rel = node.relativeTo(root).path
+            when {
+                node.isSymbolicLinkEntry() -> rel to -2L
+                node.isDirectory -> rel to -1L
+                else -> rel to node.length()
+            }
         }
     }
 
@@ -536,8 +583,8 @@ class StorageRepositoryImpl(
      */
     private fun copyAndVerify(src: File, dest: File): Throwable? =
         runCatching {
-            if (src.isDirectory) {
-                src.copyRecursively(dest, overwrite = true)
+            if (src.isDirectory && !src.isSymbolicLinkEntry()) {
+                copyTreeNoFollow(src, dest)
                 verifyCopy(src, dest)
             } else {
                 val staging = File(dest.parentFile ?: dest.absoluteFile.parentFile, ".staging-${java.util.UUID.randomUUID().toString().take(8)}-${dest.name}")
@@ -547,22 +594,55 @@ class StorageRepositoryImpl(
                     if (!staging.renameTo(dest)) {
                         staging.copyTo(dest, overwrite = true)
                         staging.delete()
+                        // The rename path moved the bytes verifyCopy already checked at the
+                        // staging path; only this fallback copy wrote dest unverified.
+                        verifyCopy(src, dest)
                     }
                 } finally {
                     if (staging.exists()) staging.delete()
                 }
-                verifyCopy(src, dest)
             }
         }.fold(onSuccess = { null }, onFailure = { it })
 
+    /** Copies a tree without following directory links; links are recreated as link entries. */
+    private fun copyTreeNoFollow(src: File, dest: File) {
+        for (node in src.walkNoFollow()) {
+            val rel = node.relativeTo(src).path
+            val target = if (rel.isEmpty()) dest else File(dest, rel)
+            when {
+                node.isSymbolicLinkEntry() -> {
+                    val linkTarget = Files.readSymbolicLink(node.toPath())
+                    Files.deleteIfExists(target.toPath())
+                    Files.createSymbolicLink(target.toPath(), linkTarget)
+                }
+                node.isDirectory -> {
+                    if (!target.isDirectory && !target.mkdirs() && !target.isDirectory) {
+                        throw java.io.IOException("Could not create directory ${target.name}")
+                    }
+                }
+                else -> node.copyTo(target, overwrite = true)
+            }
+        }
+    }
+
     private fun verifyCopy(src: File, dest: File) {
-        if (src.isDirectory) {
-            src.walkTopDown().forEach { node ->
+        if (src.isDirectory && !src.isSymbolicLinkEntry()) {
+            src.walkNoFollow().forEach { node ->
                 val rel = node.relativeTo(src).path
                 val mirror = if (rel.isEmpty()) dest else File(dest, rel)
-                if (!mirror.exists()) throw java.io.IOException("Copied tree is missing $rel")
-                if (node.isFile) {
-                    verifyFileIntegrity(node, mirror)
+                if (!mirror.exists() && !mirror.isSymbolicLinkEntry()) {
+                    throw java.io.IOException("Copied tree is missing $rel")
+                }
+                when {
+                    node.isSymbolicLinkEntry() -> {
+                        val expected = Files.readSymbolicLink(node.toPath())
+                        val actual =
+                            if (mirror.isSymbolicLinkEntry()) Files.readSymbolicLink(mirror.toPath()) else null
+                        if (actual != expected) {
+                            throw java.io.IOException("Copied link ${rel.ifEmpty { node.name }} does not match")
+                        }
+                    }
+                    node.isFile -> verifyFileIntegrity(node, mirror)
                 }
             }
         } else {
@@ -602,14 +682,14 @@ class StorageRepositoryImpl(
      * where discarding the destination destroys data.
      */
     private suspend fun deleteSourceEntries(src: File): List<File> {
-        if (!src.isDirectory) return if (entryMutator.delete(src)) emptyList() else listOf(src)
+        if (!src.isDirectory || src.isSymbolicLinkEntry()) {
+            return if (entryMutator.delete(src)) emptyList() else listOf(src)
+        }
         val survivors = mutableListOf<File>()
-        src.walkTopDown().filter { it != src }
-            .sortedByDescending { it.absolutePath.length }
-            .forEach { node ->
-                currentCoroutineContext().ensureActive()
-                if (!entryMutator.delete(node)) survivors += node
-            }
+        src.walkNoFollowPostOrder().filter { it != src }.forEach { node ->
+            currentCoroutineContext().ensureActive()
+            if (!entryMutator.delete(node)) survivors += node
+        }
         if (!entryMutator.delete(src)) survivors += src
         return survivors
     }
@@ -652,12 +732,12 @@ class StorageRepositoryImpl(
         fun scan(dir: File) {
             val children = dir.listFiles() ?: return
             for (child in children) {
-                if (child.isDirectory) {
+                if (!child.isSymbolicLinkEntry() && child.isDirectory) {
                     foldersCount++
                     scan(child)
                 } else {
                     filesCount++
-                    totalSize += child.length()
+                    if (!child.isSymbolicLinkEntry()) totalSize += child.length()
                 }
             }
         }
@@ -722,9 +802,11 @@ class StorageRepositoryImpl(
             val entriesToCompress = mutableListOf<ZipTaskEntry>()
 
             for (source in sources) {
-                if (source.isDirectory) {
+                if (source.isDirectory && !source.isSymbolicLinkEntry()) {
                     val baseDirName = source.name
-                    val dirFiles = source.walkTopDown().toList()
+                    // Links are omitted from the archive: java.util.zip cannot store link entries,
+                    // and following them would pull in content outside the selected tree.
+                    val dirFiles = source.walkNoFollow().filter { !it.isSymbolicLinkEntry() }.toList()
                     for (f in dirFiles) {
                         val relativePath = f.relativeTo(source).path.replace('\\', '/')
                         val entryName = if (relativePath.isEmpty()) {
@@ -828,8 +910,11 @@ class StorageRepositoryImpl(
         // One token per extraction: millisecond timestamps collide when two archives are unpacked
         // together, and a shared temp name corrupts both results.
         val stagingToken = java.util.UUID.randomUUID().toString()
-        val createdDuringRun = mutableListOf<File>()
-        runCatching {
+        // Reverse-order undo for everything this run changed, including files a REPLACE
+        // overwrote: rollback used to leave those holding archive content after a failure.
+        val rollbackActions = mutableListOf<suspend () -> Unit>()
+        val commitActions = mutableListOf<() -> Unit>()
+        val extraction = runCatching {
             if (!zipFile.exists() || !zipFile.isFile) throw IllegalArgumentException("Zip file does not exist")
             if (!destinationDir.exists()) destinationDir.mkdirs()
 
@@ -861,7 +946,7 @@ class StorageRepositoryImpl(
                     if (entry.isDirectory) {
                         if (!outFile.exists()) {
                             outFile.mkdirs()
-                            createdDuringRun += outFile
+                            rollbackActions += { deleteTree(outFile) }
                         }
                     } else {
                         val parent = outFile.parentFile ?: destinationDir
@@ -871,7 +956,7 @@ class StorageRepositoryImpl(
                         }
                         if (!parent.exists()) {
                             parent.mkdirs()
-                            createdDuringRun += parent
+                            rollbackActions += { deleteTree(parent) }
                         }
 
                         val targetFile = if (outFile.exists()) {
@@ -891,6 +976,27 @@ class StorageRepositoryImpl(
                         // original outFile exists but the renamed target does not, so checking
                         // outFile alone left that new file out of the rollback list.
                         val targetWasNew = !targetFile.exists()
+
+                        if (targetWasNew) {
+                            rollbackActions += { deleteTree(targetFile) }
+                        } else {
+                            // REPLACE overwrote a user file. Keep the original bytes until the
+                            // whole archive lands so a later failure can put them back.
+                            val backup = File(parent, ".bak_${stagingToken}_${targetFile.name}")
+                            if (!targetFile.renameTo(backup)) {
+                                targetFile.copyTo(backup, overwrite = true)
+                                if (!targetFile.delete()) {
+                                    throw java.io.IOException(
+                                        "Could not back up ${targetFile.name} before replacing it"
+                                    )
+                                }
+                            }
+                            rollbackActions += {
+                                runCatching { deleteTree(targetFile) }
+                                restoreReplacedFile(backup, targetFile)
+                            }
+                            commitActions += { backup.delete() }
+                        }
 
                         val tempFile = File(parent, ".tmp_${stagingToken}_${targetFile.name}")
                         try {
@@ -912,10 +1018,6 @@ class StorageRepositoryImpl(
                                 tempFile.copyTo(targetFile, overwrite = true)
                                 tempFile.delete()
                             }
-                            // Only a file this run created is rolled back: under REPLACE the
-                            // target already existed, so deleting it would take the user's own
-                            // file as well as ours.
-                            if (targetWasNew) createdDuringRun += targetFile
                         } catch (e: Exception) {
                             tempFile.delete()
                             throw e
@@ -930,16 +1032,23 @@ class StorageRepositoryImpl(
                 throw java.io.IOException("The archive is empty or contains no extractable entries.")
             }
             destinationDir
-        }.onFailure { error ->
-            // Roll back first, then rethrow. Cancellation used to return before the rollback ran,
-            // leaving the entries already written behind with no result to say so.
-            // An archive that failed halfway used to leave the earlier entries behind while the
-            // UI reported failure; the folder looked half-extracted with nothing saying so.
-            for (created in createdDuringRun.asReversed()) {
-                withContext(kotlinx.coroutines.NonCancellable) { runCatching { deleteTree(created) } }
-            }
-            if (error is CancellationException) throw error
         }
+        if (extraction.isSuccess) {
+            withContext(kotlinx.coroutines.NonCancellable) {
+                commitActions.forEach { runCatching { it() } }
+            }
+        } else {
+            // Roll back first, then rethrow. Cancellation used to return before the rollback ran,
+            // leaving the entries already written behind with no result to say so. Reversed so a
+            // REPLACE's restored original lands after the file it replaced is removed.
+            for (rollback in rollbackActions.asReversed()) {
+                withContext(kotlinx.coroutines.NonCancellable) { runCatching { rollback() } }
+            }
+            if (extraction.exceptionOrNull() is CancellationException) {
+                throw extraction.exceptionOrNull() as CancellationException
+            }
+        }
+        extraction
         }
     }
 
@@ -1066,8 +1175,7 @@ class StorageRepositoryImpl(
             try {
                 // take(200) short-circuits the walk; the old return@forEach only skipped one element
                 // and kept walking the whole tree past the cap.
-                rootDirectory.walkTopDown()
-                    .maxDepth(6)
+                rootDirectory.walkNoFollow(maxDepth = 6)
                     .filter { it.name.contains(trimmed, ignoreCase = true) && it.absolutePath != rootDirectory.absolutePath }
                     .take(200)
                     .forEach { results.add(StorageItem(it)) }
@@ -1252,7 +1360,13 @@ class StorageRepositoryImpl(
                     // Reporting the full list as "trashed" would claim the originals are gone when
                     // some failed or were retained, so the partial result carries all counts.
                     Result.failure(
-                        PartialStorageOperationException(trashed.size, failed, firstError, retained)
+                        PartialStorageOperationException(
+                            completed = trashed.size,
+                            failed = failed,
+                            cause = firstError,
+                            retainedSources = retained,
+                            completedBytes = trashed.sumOf { it.sizeBytes }
+                        )
                     )
                 } else {
                     Result.success(trashed)

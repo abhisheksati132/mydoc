@@ -1,0 +1,98 @@
+[
+  {
+    "path": "app/src/androidTest/assets/office/README.md",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/assets/office/fidelity.pptx",
+    "coverage": "structural-only"
+  },
+  {
+    "path": "app/src/androidTest/assets/office/fidelity.xlsx",
+    "coverage": "structural-only"
+  },
+  {
+    "path": "app/src/androidTest/assets/office/legacy.xls",
+    "coverage": "structural-only"
+  },
+  {
+    "path": "app/src/androidTest/assets/office/protected.pptx",
+    "coverage": "structural-only"
+  },
+  {
+    "path": "app/src/androidTest/assets/office/protected.xlsx",
+    "coverage": "structural-only"
+  },
+  {
+    "path": "app/src/androidTest/assets/word/README.md",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/assets/word/fidelity.docx",
+    "coverage": "structural-only"
+  },
+  {
+    "path": "app/src/androidTest/assets/word/legacy-image.doc",
+    "coverage": "structural-only"
+  },
+  {
+    "path": "app/src/androidTest/assets/word/legacy-template.dot",
+    "coverage": "structural-only"
+  },
+  {
+    "path": "app/src/androidTest/assets/word/protected.docx",
+    "coverage": "structural-only"
+  },
+  {
+    "path": "app/src/androidTest/assets/word/sample.fodt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/assets/word/sample.odt",
+    "coverage": "structural-only"
+  },
+  {
+    "path": "app/src/androidTest/assets/word/sample.ott",
+    "coverage": "structural-only"
+  },
+  {
+    "path": "app/src/androidTest/assets/word/sample.rtf",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/assets/word/template.dotx",
+    "coverage": "structural-only"
+  },
+  {
+    "path": "app/src/test/resources/fixtures/real-biff8.xls",
+    "coverage": "structural-only"
+  },
+  {
+    "path": "app/src/test/resources/fixtures/real-chart-bar.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/resources/fixtures/real-chart-line.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/resources/fixtures/real-chart-pie.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/resources/fixtures/real-ppt97-unicode.ppt",
+    "coverage": "structural-only"
+  },
+  {
+    "path": "app/src/test/resources/fixtures/real-ppt97.ppt",
+    "coverage": "structural-only"
+  },
+  {
+    "path": "app/src/test/resources/fixtures/real-word.docx",
+    "coverage": "structural-only"
+  },
+  {
+    "path": "app/src/test/resources/fixtures/real-word97.doc",
+    "coverage": "structural-only"
+  }
+]

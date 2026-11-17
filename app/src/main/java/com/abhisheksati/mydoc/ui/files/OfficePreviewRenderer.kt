@@ -75,8 +75,11 @@ internal object OfficePreviewRenderer {
     }
 
     private fun renderLegacyWord(open: () -> InputStream?): Bitmap? {
-        val bytes = open()?.use { it.readBytes() } ?: return null
-        if (bytes.isEmpty() || bytes.size > 50 * 1024 * 1024) return null
+        // The cap has to bound the allocation itself. Reading the whole stream first and
+        // checking its length afterwards let a large .doc throw OutOfMemoryError, which the
+        // renderer's catch(Exception) does not handle.
+        val bytes = open()?.use { readBounded(it, MAX_LEGACY_WORD_BYTES) } ?: return null
+        if (bytes.isEmpty()) return null
         val text = Word97Text.read(bytes) ?: return null
         val lines = text.lineSequence()
             .map { it.trim() }
@@ -86,6 +89,18 @@ internal object OfficePreviewRenderer {
             .toList()
         if (lines.isEmpty()) return null
         return drawWordPage(lines)
+    }
+
+    private fun readBounded(input: InputStream, maxBytes: Int): ByteArray? {
+        val out = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(16_384)
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) break
+            if (out.size() + read > maxBytes) return null
+            out.write(buffer, 0, read)
+        }
+        return out.toByteArray()
     }
 
     private suspend fun renderSlides(cacheDir: File?, open: () -> InputStream?): Bitmap? {
@@ -193,4 +208,5 @@ internal object OfficePreviewRenderer {
 
     private const val MAX_LINES = 34
     private const val MAX_BULLETS = 6
+    private const val MAX_LEGACY_WORD_BYTES = 50 * 1024 * 1024
 }

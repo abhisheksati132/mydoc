@@ -102,7 +102,7 @@ class MainActivity : ComponentActivity() {
         const val ACTION_SEARCH = "com.abhisheksati.mydoc.action.SEARCH"
         const val ACTION_MERGE_PDF = "com.abhisheksati.mydoc.action.MERGE_PDF"
         const val ACTION_OPEN_RECENT = "com.abhisheksati.mydoc.action.OPEN_RECENT"
-        const val EXTRA_RECENT_INDEX = "com.abhisheksati.mydoc.extra.RECENT_INDEX"
+        const val EXTRA_RECENT_URI = "com.abhisheksati.mydoc.extra.RECENT_URI"
         val pageTurnEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
         val quickScanEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     }
@@ -712,12 +712,12 @@ class MainActivity : ComponentActivity() {
         }
 
         if (intent.action == ACTION_OPEN_RECENT) {
-            // The row index is resolved against our own recents table, not a URI supplied by the
-            // caller, so a forged intent can only ask for a document the user already sees.
-            val index = intent.getIntExtra(EXTRA_RECENT_INDEX, -1)
+            // The URI is only an identity: opening it requires a matching row in our own recents
+            // table, so a forged intent can only ask for a document the user already sees.
+            val recentUri = intent.getStringExtra(EXTRA_RECENT_URI)
             intent.action = null
-            intent.removeExtra(EXTRA_RECENT_INDEX)
-            if (index >= 0) openRecentDocument(index)
+            intent.removeExtra(EXTRA_RECENT_URI)
+            if (recentUri != null) openRecentDocument(recentUri)
             return
         }
 
@@ -761,12 +761,12 @@ class MainActivity : ComponentActivity() {
         openUriOrFile(uri = uri, fileName = file.name, file = file, siblingFiles = siblingFiles)
     }
 
-    /** Widget row tap: open the Nth recent document, falling back to our offline copy. */
-    private fun openRecentDocument(index: Int) {
+    /** Widget row tap: open the named document if it is still a recent, falling back to our copy. */
+    private fun openRecentDocument(recentUri: String) {
         val app = application as MyDocApp
         lifecycleScope.launch {
             val doc = runCatching {
-                app.documentRepository.getRecents().first().getOrNull(index)
+                app.documentRepository.getRecents().first().firstOrNull { it.uri == recentUri }
             }.getOrNull() ?: return@launch
             val result = app.documentRepository.registerOpenedDocument(Uri.parse(doc.uri))
             result.onSuccess { opened -> currentDocument = opened }

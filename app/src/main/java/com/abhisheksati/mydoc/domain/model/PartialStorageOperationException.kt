@@ -16,5 +16,7 @@ class PartialStorageOperationException(
      * could not be removed. Deleting the copy there would destroy the parts already removed from
      * the source, so both remain and the UI has to say so.
      */
-    val retainedSources: List<String> = emptyList()
+    val retainedSources: List<String> = emptyList(),
+    /** Total size of the completed items, so a partial result can report real bytes moved. */
+    val completedBytes: Long = 0L
 ) : Exception("$completed of ${completed + failed} items completed", cause)

@@ -225,12 +225,15 @@ class OfficeDocumentParsingE2ETest {
 
     @Test
     fun tier1_feature25_presentationExtensionSetIncludesOpenXmlVariants() {
-        val supportedExtensions = setOf("ppt", "pptx", "pot", "potx", "pps", "ppsx", "pptm", "odp", "fodp", "otp")
-
-        assertTrue(supportedExtensions.contains("pptx"))
-        assertTrue(supportedExtensions.contains("pptm"))
-        assertTrue(supportedExtensions.contains("ppsx"))
-        assertTrue(supportedExtensions.contains("potx"))
+        // Assert against the production format registry, not a set declared in this test:
+        // a local set proves nothing about what the app actually routes.
+        val presentationExtensions = listOf("ppt", "pptx", "pot", "potx", "pps", "ppsx", "pptm", "odp", "fodp", "otp")
+        for (ext in presentationExtensions) {
+            val descriptor = com.abhisheksati.mydoc.domain.model.DocumentFormats.forExtension(ext)
+            assertNotNull("Production registry must know .$ext", descriptor)
+            assertEquals(".$ext must route as a presentation", com.abhisheksati.mydoc.domain.model.DocumentFamily.PRESENTATION, descriptor!!.family)
+            assertTrue(".$ext must be supported", descriptor.isSupported)
+        }
     }
 
     @Test

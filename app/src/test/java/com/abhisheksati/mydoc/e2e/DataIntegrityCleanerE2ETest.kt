@@ -293,19 +293,6 @@ class DataIntegrityCleanerE2ETest {
     // FEATURE 8: Offline Document Cache Quota & Invalidation (Tier 1 & 2)
     // =========================================================================
 
-    @Test
-    fun tier1_feature8_cacheDirectoryBoundedUnderQuota() {
-        val savedDocsDir = File(mockContext.filesDir, "saved_docs").apply { mkdirs() }
-        // Create 60 small files to test bounding logic
-        for (i in 1..60) {
-            File(savedDocsDir, "doc_${i}.pdf").writeBytes(ByteArray(1024))
-        }
-
-        // Invoke trim logic if available or verify directory count
-        val files = savedDocsDir.listFiles() ?: emptyArray()
-        assertTrue(files.isNotEmpty())
-    }
-
     // =========================================================================
     // FEATURE 9: Stable Document Identity (Tier 1 & 2)
     // =========================================================================
@@ -379,19 +366,42 @@ class DataIntegrityCleanerE2ETest {
     fun tier2_feature10_zipBombHighCompressionRatioAbortsExtraction() = runBlocking {
         val bombZip = File(rootDir, "bomb.zip")
         val extractDir = File(rootDir, "bomb_extracted")
-        // 10 MB zeroes compressed to a few KB
+        // 10 MB of zeroes compresses to a few KB, so once extraction passes the 5 MB check the
+        // archive's ratio is far beyond the 100:1 guard and must be rejected.
         SyntheticDocumentFactory.createZipBomb(bombZip, uncompressedSizeBytes = 10L * 1024 * 1024)
 
-        try {
-            val result = storageRepo.unzip(bombZip, extractDir)
-            // If the implementation bounds compression ratio, it will return failure or throw SecurityException
-            if (result.isFailure) {
-                val ex = result.exceptionOrNull()
-                assertNotNull(ex)
+        val result = storageRepo.unzip(bombZip, extractDir)
+
+        assertTrue("A 1000:1 archive must not extract successfully", result.isFailure)
+        val failure = result.exceptionOrNull()
+        assertTrue("Rejection must be the compression-ratio guard, got $failure", failure is SecurityException)
+        assertTrue("Rejection must name the bomb guard: ${failure?.message}",
+            failure?.message?.contains("zip bomb", ignoreCase = true) == true)
+        assertFalse("Aborted extraction must leave no partial output",
+            File(extractDir, "bomb.bin").exists())
+    }
+
+    @Test
+    fun tier1_feature8_cacheDirectoryBoundedUnderQuota() {
+        val savedDocsDir = File(mockContext.filesDir, "saved_docs").apply { mkdirs() }
+        val baseTime = System.currentTimeMillis() - 120_000L
+        for (i in 1..60) {
+            File(savedDocsDir, "doc_${i}.pdf").apply {
+                writeBytes(ByteArray(1024))
+                setLastModified(baseTime + i * 1000L)
             }
-        } catch (_: SecurityException) {
-            // Expected
         }
+
+        com.abhisheksati.mydoc.data.local.DocumentStreamResolver.trimSavedDocsCache(savedDocsDir)
+
+        val remaining = savedDocsDir.listFiles()!!.filter { it.isFile }.sortedBy { it.name }
+        assertEquals("The saved-docs cache must hold at most its 50-file budget",
+            com.abhisheksati.mydoc.data.local.DocumentStreamResolver.MAX_SAVED_DOCS_COUNT, remaining.size)
+        assertTrue("The byte budget must also be respected",
+            remaining.sumOf { it.length() } <= com.abhisheksati.mydoc.data.local.DocumentStreamResolver.MAX_SAVED_DOCS_BYTES)
+        assertFalse("The least recently used copy must be evicted", File(savedDocsDir, "doc_1.pdf").exists())
+        assertFalse("The least recently used copy must be evicted", File(savedDocsDir, "doc_10.pdf").exists())
+        assertTrue("The most recent copy must survive", File(savedDocsDir, "doc_60.pdf").exists())
     }
 
     // =========================================================================

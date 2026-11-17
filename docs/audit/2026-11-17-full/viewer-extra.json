@@ -1,0 +1,92 @@
+[
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/rendering/engine/word/DocxConverter.kt",
+    "coverage": "full",
+    "notes": "Entire production file read in bounded excerpts."
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/rendering/engine/word/DocxImageDecoder.kt",
+    "coverage": "full",
+    "notes": "Entire production file read in bounded excerpts."
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/rendering/engine/word/DocxParagraphLayout.kt",
+    "coverage": "full",
+    "notes": "Entire production file read in bounded excerpts."
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/ui/viewer/controls/DocumentToolsSheet.kt",
+    "coverage": "full",
+    "notes": "Entire production file read in bounded excerpts."
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/ui/viewer/controls/OutlineDrawer.kt",
+    "coverage": "full",
+    "notes": "Entire production file read in bounded excerpts."
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/ui/viewer/controls/PageGridSheet.kt",
+    "coverage": "full",
+    "notes": "Entire production file read in bounded excerpts."
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/ui/viewer/controls/PrintHelper.kt",
+    "coverage": "full",
+    "notes": "Entire production file read in bounded excerpts."
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/ui/viewer/controls/ReadingControlsBottomSheet.kt",
+    "coverage": "full",
+    "notes": "Entire production file read in bounded excerpts."
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/ui/viewer/controls/ViewerBottomBar.kt",
+    "coverage": "full",
+    "notes": "Entire production file read in bounded excerpts."
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/ui/viewer/controls/ViewerScaffold.kt",
+    "coverage": "full",
+    "notes": "Entire production file read in bounded excerpts."
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/ui/viewer/controls/ViewerTopBar.kt",
+    "coverage": "full",
+    "notes": "Entire production file read in bounded excerpts."
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/ui/viewer/pdf/PdfContextualActionsHost.kt",
+    "coverage": "full",
+    "notes": "Entire production file read in bounded excerpts."
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/ui/viewer/pdf/PdfPageActionSheet.kt",
+    "coverage": "full",
+    "notes": "Entire production file read in bounded excerpts."
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/ui/viewer/pdf/PdfPageItemView.kt",
+    "coverage": "full",
+    "notes": "Entire production file read in bounded excerpts."
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/ui/viewer/presentation/PresentationSlideCards.kt",
+    "coverage": "full",
+    "notes": "Entire production file read in bounded excerpts."
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/ui/viewer/presentation/PresentationViewerScreen.kt",
+    "coverage": "full",
+    "notes": "Entire production file read in bounded excerpts."
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/ui/viewer/text/TextViewerScreen.kt",
+    "coverage": "full",
+    "notes": "Entire production file read in bounded excerpts."
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/ui/viewer/word/WordViewerScreen.kt",
+    "coverage": "full",
+    "notes": "Entire production file read in bounded excerpts."
+  }
+]

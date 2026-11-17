@@ -26,6 +26,7 @@ import com.abhisheksati.mydoc.domain.model.LibraryItem
 import com.abhisheksati.mydoc.domain.model.MediaKind
 import com.abhisheksati.mydoc.domain.model.ViewState
 import com.abhisheksati.mydoc.designsystem.components.AppTopBar
+import com.abhisheksati.mydoc.util.UserMessages
 import kotlinx.coroutines.*
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
@@ -75,7 +76,7 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (e: Exception) {
-                    message = resources.getString(R.string.discovery_refresh_failed, e.message.orEmpty())
+                    message = UserMessages.actionFailed(R.string.menu_refresh, e, "Discovery").resolve(context)
                 } finally {
                     working = false
                 }
@@ -85,12 +86,12 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
     LaunchedEffect(query,tag,extension,revision) {
         delay(180)
         try { results=store.search(query.trim(),tag.trim().lowercase(java.util.Locale.ROOT),extension);collections=store.collections() }
-        catch(e: Exception) { if(e is CancellationException)throw e;message=resources.getString(R.string.discovery_search_failed, e.message.orEmpty()) }
+        catch(e: Exception) { if(e is CancellationException)throw e;message=UserMessages.actionFailed(R.string.ctx_search, e, "Discovery").resolve(context) }
     }
     fun mutate(operation: suspend ()->Unit) {
         scope.launch {
             try { operation() } catch(e: CancellationException) { throw e }
-            catch(e: Exception) { message=resources.getString(R.string.discovery_save_failed, e.message.orEmpty()) }
+            catch(e: Exception) { message=UserMessages.actionFailed(R.string.action_save, e, "Discovery").resolve(context) }
         }
     }
     var relinkTarget by remember { mutableStateOf<DiscoveredFile?>(null) }
@@ -151,7 +152,7 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
                         }
                     }
                     catch(e: CancellationException) { throw e }
-                    catch(e: Exception) { message=resources.getString(R.string.discovery_refresh_failed, e.message.orEmpty()) }
+                    catch(e: Exception) { message=UserMessages.actionFailed(R.string.menu_refresh, e, "Discovery").resolve(context) }
                     finally { working=false }
                 }
             },enabled=!working) { Text(stringResource(R.string.menu_refresh)) }
@@ -188,7 +189,7 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
                             TextButton(onClick={scope.launch {
                                 try {
                                     val reachable=withContext(Dispatchers.IO) { context.contentResolver.openAssetFileDescriptor(Uri.parse(file.uri),"r")?.use { true } ?: false }
-                                    check(reachable) { resources.getString(R.string.discovery_file_missing) }
+                                    if(!reachable) { message=resources.getString(R.string.discovery_file_missing);return@launch }
                                     val kind=when { file.mime.startsWith("image/")->MediaKind.PHOTO;file.mime.startsWith("audio/")->MediaKind.AUDIO;file.mime.startsWith("video/")->MediaKind.VIDEO;else->MediaKind.DOCUMENT }
                                     if(kind==MediaKind.DOCUMENT && file.snippet.isNotEmpty()) {
                                         val existing = app.documentRepository.getViewState(file.uri)
@@ -196,7 +197,7 @@ fun DiscoveryScreen(onBack: ()->Unit,onOpen: (LibraryItem)->Unit) {
                                         app.documentRepository.saveViewState(updated)
                                     }
                                     onOpen(LibraryItem(file.uri,file.name,kind,file.mime,file.size,file.modified))
-                                } catch(e: Exception) { if(e is CancellationException)throw e;message=e.message ?: resources.getString(R.string.discovery_open_failed) }
+                                } catch(e: Exception) { if(e is CancellationException)throw e;message=UserMessages.actionFailed(R.string.action_open, e, "Discovery").resolve(context) }
                             }}) { Text(stringResource(R.string.action_open)) }
                             TextButton(onClick={relinkTarget=file;relink.launch(arrayOf("*/*"))},enabled=!working) { Text(stringResource(R.string.discovery_relink)) }
                             TextButton(onClick={tagsForUri=file.uri;tagsForName=file.name;tagsValue=file.tags}) { Text(stringResource(R.string.discovery_edit_tags)) }

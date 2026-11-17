@@ -71,6 +71,35 @@ import java.util.zip.ZipOutputStream
  * 3. Page-by-page streaming to avoid OOM.
  * 4. Automatic temporary file cleanup in finally blocks.
  */
+private const val MAX_TOOL_INPUT_BYTES = 256L * 1024 * 1024
+private const val MAX_TOOL_TOTAL_BYTES = 512L * 1024 * 1024
+
+/**
+ * Copies one provider stream into the staging file. Every iteration checks for cancellation, so
+ * Cancel interrupts an indefinitely streaming provider, and the byte cap stops one that never ends
+ * from filling the cache partition.
+ */
+internal suspend fun copyStagedInput(
+    input: java.io.InputStream,
+    output: java.io.OutputStream,
+    maxBytes: Long = MAX_TOOL_INPUT_BYTES
+) {
+    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+    var total = 0L
+    while (true) {
+        currentCoroutineContext().ensureActive()
+        val read = input.read(buffer)
+        if (read < 0) break
+        total += read
+        if (total > maxBytes) {
+            throw java.io.IOException(
+                "Input exceeds the ${maxBytes / (1024 * 1024)} MiB per-file limit"
+            )
+        }
+        output.write(buffer, 0, read)
+    }
+}
+
 class PdfToolsEngine(private val context: Context) {
 
     suspend fun executeTool(
@@ -94,11 +123,17 @@ class PdfToolsEngine(private val context: Context) {
             onProgress(ToolProgress(0, 100, 5, "Preparing input files...", false))
 
             // Copy URIs to temp files safely
+            var stagedBytes = 0L
             val inputFiles = inputUris.map { uri ->
                 currentCoroutineContext().ensureActive()
-                val temp = copyUriToTemp(uri)
-                tempFilesToDelete.add(temp)
-                temp
+                val staged = copyUriToTemp(uri, tempFilesToDelete)
+                stagedBytes += staged.length()
+                if (stagedBytes > MAX_TOOL_TOTAL_BYTES) {
+                    throw java.io.IOException(
+                        "Selected files exceed the ${MAX_TOOL_TOTAL_BYTES / (1024 * 1024)} MiB total limit"
+                    )
+                }
+                staged
             }
 
             val primaryFile = inputFiles.firstOrNull()
@@ -339,14 +374,21 @@ class PdfToolsEngine(private val context: Context) {
     // -------------------------------------------------------------
 
 
-    private fun copyUriToTemp(uri: Uri): File {
+    /**
+     * Stages [uri] into an owned temp file. [owned] receives the file before the first byte is
+     * read, so a failed or cancelled copy still has its partial output cleaned up by the caller's
+     * finally block. The copy is bounded and cancellable: an unbounded stream from a provider can
+     * otherwise fill the cache partition before any tool runs.
+     */
+    private suspend fun copyUriToTemp(uri: Uri, owned: MutableList<File>): File {
         val temp = File.createTempFile("mydoc_tool_in_", ".tmp", context.cacheDir)
+        owned.add(temp)
         val stream = com.abhisheksati.mydoc.data.local.DocumentStreamResolver.openStream(context, uri)
             ?: context.contentResolver.openInputStream(uri)
             ?: throw IllegalArgumentException("Cannot read URI $uri")
         stream.use { input ->
             FileOutputStream(temp).use { output ->
-                input.copyTo(output)
+                copyStagedInput(input, output)
             }
         }
         return temp

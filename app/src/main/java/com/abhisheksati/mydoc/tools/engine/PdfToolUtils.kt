@@ -62,16 +62,31 @@ object PdfToolUtils {
     /**
      * Sanitize user or document text for safe XML embedding by stripping illegal characters
      * and escaping XML special entities.
+     *
+     * Walks code points, not chars: a non-BMP character is a surrogate pair, and judging each half
+     * against [#x20-#xD7FF] would delete every emoji and rare CJK character from the output. Legal
+     * XML 1.0 characters are #x9, #xA, #xD, [#x20-#xD7FF], [#xE000-#xFFFD] and [#x10000-#x10FFFF].
      */
     fun sanitizeXml(text: String): String {
-        return text.filter { ch ->
-            ch == '\t' || ch == '\n' || ch == '\r' || (ch.code in 0x20..0xD7FF) || (ch.code in 0xE000..0xFFFD)
-        }.replace("&", "&amp;")
+        val filtered = StringBuilder(text.length)
+        var index = 0
+        while (index < text.length) {
+            val codePoint = text.codePointAt(index)
+            if (isLegalXmlCodePoint(codePoint)) filtered.appendCodePoint(codePoint)
+            index += Character.charCount(codePoint)
+        }
+        return filtered.toString().replace("&", "&amp;")
             .replace("<", "&lt;")
             .replace(">", "&gt;")
             .replace("\"", "&quot;")
             .replace("'", "&apos;")
     }
+
+    internal fun isLegalXmlCodePoint(codePoint: Int): Boolean =
+        codePoint == 0x9 || codePoint == 0xA || codePoint == 0xD ||
+            (codePoint in 0x20..0xD7FF) ||
+            (codePoint in 0xE000..0xFFFD) ||
+            (codePoint in 0x10000..0x10FFFF)
 
     /**
      * Create a managed temporary output file in the tools output cache directory.

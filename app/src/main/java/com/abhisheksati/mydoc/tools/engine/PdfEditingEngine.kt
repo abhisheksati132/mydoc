@@ -163,39 +163,43 @@ class PdfEditingEngine(private val context: Context) {
                     val h = box.height
                     val originX = box.lowerLeftX
                     val originY = box.lowerLeftY
-                    val rotation = (page.rotation ?: 0) % 360
+                    val rotation = page.rotation % 360
 
                     val isRotated = rotation == 90 || rotation == 270
                     val visW = if (isRotated) h else w
                     val visH = if (isRotated) w else h
 
-                    val sigW = (visW * options.signatureScale).coerceIn(80f, visW * 0.85f)
-                    val sigH = sigW * (sigBmp.height.toFloat() / sigBmp.width.toFloat())
-                    val vx = (visW * options.signatureXPercent) - (sigW / 2f)
-                    val vy = (visH * options.signatureYPercent) - (sigH / 2f)
+                    val placement = layoutSignature(
+                        visW = visW,
+                        visH = visH,
+                        scale = options.signatureScale,
+                        xPercent = options.signatureXPercent,
+                        yPercent = options.signatureYPercent,
+                        aspectRatio = sigBmp.width.toFloat() / sigBmp.height.toFloat()
+                    )
 
                     PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
                         when (rotation) {
                             90 -> {
                                 cs.saveGraphicsState()
-                                cs.transform(com.tom_roush.pdfbox.util.Matrix(0f, 1f, -1f, 0f, originX + w - vy, originY + vx))
-                                cs.drawImage(pdImage, 0f, 0f, sigW, sigH)
+                                cs.transform(com.tom_roush.pdfbox.util.Matrix(0f, 1f, -1f, 0f, originX + w - placement.y, originY + placement.x))
+                                cs.drawImage(pdImage, 0f, 0f, placement.width, placement.height)
                                 cs.restoreGraphicsState()
                             }
                             180 -> {
                                 cs.saveGraphicsState()
-                                cs.transform(com.tom_roush.pdfbox.util.Matrix(-1f, 0f, 0f, -1f, originX + w - vx, originY + h - vy))
-                                cs.drawImage(pdImage, 0f, 0f, sigW, sigH)
+                                cs.transform(com.tom_roush.pdfbox.util.Matrix(-1f, 0f, 0f, -1f, originX + w - placement.x, originY + h - placement.y))
+                                cs.drawImage(pdImage, 0f, 0f, placement.width, placement.height)
                                 cs.restoreGraphicsState()
                             }
                             270 -> {
                                 cs.saveGraphicsState()
-                                cs.transform(com.tom_roush.pdfbox.util.Matrix(0f, -1f, 1f, 0f, originX + vy, originY + h - vx))
-                                cs.drawImage(pdImage, 0f, 0f, sigW, sigH)
+                                cs.transform(com.tom_roush.pdfbox.util.Matrix(0f, -1f, 1f, 0f, originX + placement.y, originY + h - placement.x))
+                                cs.drawImage(pdImage, 0f, 0f, placement.width, placement.height)
                                 cs.restoreGraphicsState()
                             }
                             else -> {
-                                cs.drawImage(pdImage, originX + vx, originY + vy, sigW, sigH)
+                                cs.drawImage(pdImage, originX + placement.x, originY + placement.y, placement.width, placement.height)
                             }
                         }
                     }
@@ -208,6 +212,42 @@ class PdfEditingEngine(private val context: Context) {
             sigBmp.recycle()
         }
     }
+}
+
+internal data class SignaturePlacement(
+    val width: Float,
+    val height: Float,
+    val x: Float,
+    val y: Float
+)
+
+/**
+ * Size and lower-left offset of a signature stamp centred at ([xPercent], [yPercent]) of a
+ * [visW] x [visH] visible page area.
+ *
+ * A narrow page (under ~94 pt wide) makes `visW * 0.85` smaller than the old fixed 80 pt minimum,
+ * and `coerceIn(80f, max)` threw on that empty range before saving. Both bounds come from the page
+ * here, the height is capped against the page height, and the stamp stays inside the page box.
+ */
+internal fun layoutSignature(
+    visW: Float,
+    visH: Float,
+    scale: Float,
+    xPercent: Float,
+    yPercent: Float,
+    aspectRatio: Float
+): SignaturePlacement {
+    val maxW = visW * 0.85f
+    var width = (visW * scale).coerceIn(minOf(80f, maxW), maxW)
+    var height = width / aspectRatio
+    val maxH = visH * 0.85f
+    if (height > maxH) {
+        height = maxH
+        width = height * aspectRatio
+    }
+    val x = ((visW * xPercent) - (width / 2f)).coerceIn(0f, (visW - width).coerceAtLeast(0f))
+    val y = ((visH * yPercent) - (height / 2f)).coerceIn(0f, (visH - height).coerceAtLeast(0f))
+    return SignaturePlacement(width, height, x, y)
 }
 
 /**

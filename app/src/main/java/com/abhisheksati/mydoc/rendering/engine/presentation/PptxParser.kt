@@ -517,10 +517,17 @@ class PptxParser {
         var mediaCount = 0
         var currentTotal = 0L
         var entryCount = 0
+        var limitReached = false
         // The cached-file route used to carry only the per-entry cap, so a package of
         // many individually legal entries could inflate past the aggregate the
         // in-memory route enforces. Same budgets on both routes now.
-        while (entries.hasMoreElements() && entryCount < 2_500 && currentTotal < MAX_TOTAL_BYTES) {
+        while (entries.hasMoreElements()) {
+            // Stopping on a safety cap leaves the entry map short, and the deck built from it
+            // then looked complete. The in-memory route already told the reader it stopped.
+            if (entryCount >= 2_500 || currentTotal >= MAX_TOTAL_BYTES) {
+                limitReached = true
+                break
+            }
             entryCount++
             val entry = entries.nextElement()
             if (!entry.isDirectory) {
@@ -536,7 +543,12 @@ class PptxParser {
                 entryMap[norm] = data
             }
         }
-        return parseFromEntryMap(entryMap)
+        val presentation = parseFromEntryMap(entryMap)
+        return if (limitReached && presentation.slides.isNotEmpty()) {
+            presentation.copy(
+                incompleteReason = "This file exceeded the limits MyDoc applies, so only part of it was read."
+            )
+        } else presentation
     }
 
     private fun parseZipInMemory(bytes: ByteArray): PptxPresentation {
@@ -698,6 +710,16 @@ class PptxParser {
         val chExtX: Long,
         val chExtY: Long
     )
+
+    /** Rewrites the innermost open group. push() leaves it first, and java.util.ArrayDeque
+     * has no indexed set, so it is taken off the front and put back updated. */
+    private fun updateInnermostGroup(
+        stack: java.util.ArrayDeque<GroupTransform>,
+        update: (GroupTransform) -> GroupTransform
+    ) {
+        val top = stack.removeFirst()
+        stack.addFirst(update(top))
+    }
 
     private data class PlaceholderLayout(
         val bounds: SlideBounds?,
@@ -1652,9 +1674,11 @@ class PptxParser {
                                 // it, so `inShape` is what tells this off apart from a shape's.
                                 // Writing it to curOffX left the group at zero extent and every
                                 // grouped shape was placed in the group's raw child space.
-                                if (!inShape && groupTransformStack.isNotEmpty()) {
-                                    val top = groupTransformStack.removeLast()
-                                    groupTransformStack.addLast(top.copy(offX = x, offY = y))
+                                // push() leaves the innermost group at index 0; updating the last
+                                // element wrote to the outermost group, so a nested group's xfrm
+                                // overwrote its parent's instead of its own.
+                                if (!inShape && !inPic && !inGraphicFrame && groupTransformStack.isNotEmpty()) {
+                                    updateInnermostGroup(groupTransformStack) { it.copy(offX = x, offY = y) }
                                 } else {
                                     curOffX = x; curOffY = y
                                 }
@@ -1664,9 +1688,8 @@ class PptxParser {
                                 val cx = parser.getAttributeValue(null, "cx")?.toLongOrNull() ?: 0L
                                 val cy = parser.getAttributeValue(null, "cy")?.toLongOrNull() ?: 0L
                                 if (cx > 0L && cy > 0L) {
-                                    if (!inShape && groupTransformStack.isNotEmpty()) {
-                                        val top = groupTransformStack.removeLast()
-                                        groupTransformStack.addLast(top.copy(extX = cx, extY = cy))
+                                    if (!inShape && !inPic && !inGraphicFrame && groupTransformStack.isNotEmpty()) {
+                                        updateInnermostGroup(groupTransformStack) { it.copy(extX = cx, extY = cy) }
                                     } else {
                                         curExtX = cx; curExtY = cy
                                     }
@@ -1675,19 +1698,17 @@ class PptxParser {
 
                             isTag(tagName, "chOff") -> {
                                 if (groupTransformStack.isNotEmpty()) {
-                                    val top = groupTransformStack.removeLast()
                                     val cx = parser.getAttributeValue(null, "x")?.toLongOrNull() ?: 0L
                                     val cy = parser.getAttributeValue(null, "y")?.toLongOrNull() ?: 0L
-                                    groupTransformStack.addLast(top.copy(chOffX = cx, chOffY = cy))
+                                    updateInnermostGroup(groupTransformStack) { it.copy(chOffX = cx, chOffY = cy) }
                                 }
                             }
 
                             isTag(tagName, "chExt") -> {
                                 if (groupTransformStack.isNotEmpty()) {
-                                    val top = groupTransformStack.removeLast()
                                     val cx = parser.getAttributeValue(null, "cx")?.toLongOrNull() ?: 0L
                                     val cy = parser.getAttributeValue(null, "cy")?.toLongOrNull() ?: 0L
-                                    groupTransformStack.addLast(top.copy(chExtX = cx, chExtY = cy))
+                                    updateInnermostGroup(groupTransformStack) { it.copy(chExtX = cx, chExtY = cy) }
                                 }
                             }
 

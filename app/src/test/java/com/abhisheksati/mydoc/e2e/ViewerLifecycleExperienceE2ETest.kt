@@ -1,13 +1,12 @@
 package com.abhisheksati.mydoc.e2e
 
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import com.abhisheksati.mydoc.domain.model.ReadingMode
-import com.abhisheksati.mydoc.rendering.cache.TileBitmapCache
+import com.abhisheksati.mydoc.rendering.cache.ByteBoundedLru
 import com.abhisheksati.mydoc.ui.viewer.controls.ZoomMath
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -144,17 +143,58 @@ class ViewerLifecycleExperienceE2ETest {
     // =========================================================================
 
     @Test
-    fun tier1_feature33_tileBitmapCacheBoundsMemoryUnder96MB() {
-        val cache = TileBitmapCache(maxMemoryBytes = 64 * 1024 * 1024)
-        assertNotNull(cache)
-        cache.clear()
+    fun tier1_feature33_byteBoundedLruEvictsOldestEntriesBeyondByteBudget() {
+        val cache = ByteBoundedLru<String> { it.length }
+        cache.put("page_1", "a".repeat(10))
+        cache.put("page_2", "b".repeat(10))
+        cache.put("page_3", "c".repeat(10))
+        assertEquals(30, cache.currentBytes)
+
+        cache.trimTo(25)
+
+        assertNull(cache["page_1"])
+        assertNotNull(cache["page_2"])
+        assertNotNull(cache["page_3"])
+        assertEquals(20, cache.currentBytes)
     }
 
     @Test
-    fun tier2_feature33_tileBitmapCacheRecycleAllCleansState() {
-        val cache = TileBitmapCache(maxMemoryBytes = 32 * 1024 * 1024)
-        cache.recycleAll()
+    fun tier2_feature33_byteBoundedLruKeepsRecentlyReadEntries() {
+        val cache = ByteBoundedLru<String> { it.length }
+        cache.put("page_1", "a".repeat(10))
+        cache.put("page_2", "b".repeat(10))
+        // Reading page_1 makes page_2 the eviction candidate
+        assertEquals("a".repeat(10), cache["page_1"])
+        cache.put("page_3", "c".repeat(10))
+
+        cache.trimTo(25)
+
+        assertNotNull(cache["page_1"])
+        assertNull(cache["page_2"])
+        assertNotNull(cache["page_3"])
+    }
+
+    @Test
+    fun tier2_feature33_byteBoundedLruReplacingAnEntryAccountsBytesOnce() {
+        val cache = ByteBoundedLru<String> { it.length }
+        cache.put("page_1", "a".repeat(10))
+        cache.put("page_1", "b".repeat(4))
+
+        assertEquals(1, cache.size)
+        assertEquals(4, cache.currentBytes)
+    }
+
+    @Test
+    fun tier3_feature33_clearReleasesEveryEntryAtTeardown() {
+        val cache = ByteBoundedLru<String> { it.length }
+        cache.put("page_1", "a".repeat(20))
+        cache.put("page_2", "b".repeat(20))
+
         cache.clear()
+
+        assertEquals(0, cache.currentBytes)
+        assertEquals(0, cache.size)
+        assertNull(cache["page_1"])
     }
 
     // =========================================================================
@@ -166,7 +206,7 @@ class ViewerLifecycleExperienceE2ETest {
         // Step 1: User opens reader and configures preferences
         var readingMode = ReadingMode.NORMAL
         var isFitPage = false
-        val tileCache = TileBitmapCache(maxMemoryBytes = 48 * 1024 * 1024)
+        val tileCache = ByteBoundedLru<String> { it.length }
 
         // Step 2: Switch to Night reading mode
         readingMode = ReadingMode.INVERTED_DARK
@@ -181,10 +221,18 @@ class ViewerLifecycleExperienceE2ETest {
         val maxPan = ZoomMath.calculateMaxPan(viewport, 2.0f)
         assertTrue(maxPan.x > 0f && maxPan.y > 0f)
 
-        // Step 5: Low Memory Warning (System onTrimMemory)
-        tileCache.clear()
+        // Step 5: Pages accumulate in the tile cache while the user reads
+        repeat(10) { page -> tileCache.put("page_$page", "x".repeat(100)) }
+        assertEquals(1000, tileCache.currentBytes)
 
-        // Step 6: User closes viewer (Lifecycle Teardown)
-        tileCache.recycleAll()
+        // Step 6: Low Memory Warning (System onTrimMemory): recent pages survive the halving
+        tileCache.trimTo(tileCache.currentBytes / 2)
+        assertEquals(500, tileCache.currentBytes)
+        assertNull(tileCache["page_0"])
+
+        // Step 7: User closes viewer (Lifecycle Teardown): nothing survives
+        tileCache.clear()
+        assertEquals(0, tileCache.currentBytes)
+        assertEquals(0, tileCache.size)
     }
 }

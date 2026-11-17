@@ -406,8 +406,8 @@ class PdfConversionEngine(private val context: Context) {
         var ocrEngine: OcrEngine? = null
         try {
             val totalPages = srcDoc.countPages()
-            val sb = StringBuilder()
-            sb.append("# ${file.nameWithoutExtension}\n\n")
+            val extractedPages = mutableListOf<Pair<Int, String>>()
+            val failedOcrPages = mutableListOf<Int>()
 
             for (p in 0 until totalPages) {
                 currentCoroutineContext().ensureActive()
@@ -434,7 +434,9 @@ class PdfConversionEngine(private val context: Context) {
                     val engine = ocrEngine ?: OcrEngine(context).also { ocrEngine = it }
                     val ocrPage = srcDoc.loadPage(p)
                     val pixmap = try {
-                        ocrPage.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, true)
+                        val bounds = ocrPage.bounds
+                        val scale = cappedRenderScale(bounds.x1 - bounds.x0, bounds.y1 - bounds.y0, 1.5f)
+                        ocrPage.toPixmap(Matrix(scale, scale), ColorSpace.DeviceRGB, true)
                     } finally {
                         ocrPage.destroy()
                     }
@@ -446,25 +448,26 @@ class PdfConversionEngine(private val context: Context) {
                     pageStr = try {
                         engine.recognizeText(bmp).trim()
                     } catch (_: Exception) {
+                        failedOcrPages.add(p + 1)
                         ""
                     } finally {
                         bmp.recycle()
                     }
                 }
                 if (pageStr.isNotBlank()) {
-                    sb.append("## Page ${p + 1}\n\n").append(pageStr).append("\n\n")
+                    extractedPages.add((p + 1) to pageStr)
                 }
 
                 val pct = 10 + (((p + 1).toFloat() / totalPages) * 70).toInt()
                 onProgress(ToolProgress(p + 1, totalPages, pct, "Extracting text from page ${p + 1}...", false))
             }
 
-            val textContent = sb.toString().trim()
-            if (textContent.isEmpty()) {
-                throw IllegalStateException("No readable or extractable text found in this document.")
-            }
+            // The builder used to be tested for emptiness while already holding the title heading,
+            // so an image-only PDF was reported as a successful extraction of a heading-only file.
+            val markdown = buildExtractedMarkdown(file.nameWithoutExtension, extractedPages, failedOcrPages)
+                ?: throw IllegalStateException("No readable or extractable text found in this document.")
             val outFile = createTempOutputFile("extracted", "md")
-            outFile.writeText(sb.toString())
+            outFile.writeText(markdown)
             return outFile
         } finally {
             ocrEngine?.close()
@@ -482,6 +485,7 @@ class PdfConversionEngine(private val context: Context) {
         try {
             val totalPages = srcDoc.countPages()
             val paragraphs = mutableListOf<String>()
+            val failedOcrPages = mutableListOf<Int>()
 
             for (p in 0 until totalPages) {
                 currentCoroutineContext().ensureActive()
@@ -505,7 +509,9 @@ class PdfConversionEngine(private val context: Context) {
                     val engine = ocrEngine ?: OcrEngine(context).also { ocrEngine = it }
                     val ocrPage = srcDoc.loadPage(p)
                     val pixmap = try {
-                        ocrPage.toPixmap(Matrix(1.5f, 1.5f), ColorSpace.DeviceRGB, true)
+                        val bounds = ocrPage.bounds
+                        val scale = cappedRenderScale(bounds.x1 - bounds.x0, bounds.y1 - bounds.y0, 1.5f)
+                        ocrPage.toPixmap(Matrix(scale, scale), ColorSpace.DeviceRGB, true)
                     } finally {
                         ocrPage.destroy()
                     }
@@ -517,6 +523,7 @@ class PdfConversionEngine(private val context: Context) {
                     val ocrText = try {
                         engine.recognizeText(bmp)
                     } catch (_: Exception) {
+                        failedOcrPages.add(p + 1)
                         ""
                     } finally {
                         bmp.recycle()
@@ -533,6 +540,12 @@ class PdfConversionEngine(private val context: Context) {
 
             if (paragraphs.isEmpty()) {
                 throw IllegalStateException("No readable or extractable text found to convert into Office document.")
+            }
+            if (failedOcrPages.isNotEmpty()) {
+                paragraphs.add(
+                    "OCR could not read page" + (if (failedOcrPages.size == 1) " " else "s ") +
+                        failedOcrPages.joinToString(", ") + "; text from those pages may be missing."
+                )
             }
 
             // Create valid OOXML DOCX ZIP
@@ -715,4 +728,28 @@ class PdfConversionEngine(private val context: Context) {
 internal fun cappedRenderScale(widthPt: Float, heightPt: Float, baseScale: Float, maxPx: Float = 4096f): Float {
     val longest = max(widthPt * baseScale, heightPt * baseScale)
     return if (longest > maxPx) baseScale * (maxPx / longest) else baseScale
+}
+
+/**
+ * Markdown for an extracted text document, or null when no page yielded text. [pages] carries the
+ * 1-based page number with its text so blank pages keep the numbering of the source document.
+ */
+internal fun buildExtractedMarkdown(
+    title: String,
+    pages: List<Pair<Int, String>>,
+    failedOcrPages: List<Int>
+): String? {
+    if (pages.isEmpty()) return null
+    return buildString {
+        append("# ").append(title).append("\n\n")
+        for ((number, text) in pages) {
+            append("## Page ").append(number).append("\n\n").append(text).append("\n\n")
+        }
+        if (failedOcrPages.isNotEmpty()) {
+            append("> OCR could not read page")
+                .append(if (failedOcrPages.size == 1) " " else "s ")
+                .append(failedOcrPages.joinToString(", "))
+                .append("; text from those pages may be missing.\n")
+        }
+    }
 }

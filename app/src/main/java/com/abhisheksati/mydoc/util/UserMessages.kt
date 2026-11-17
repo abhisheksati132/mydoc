@@ -1,6 +1,5 @@
 package com.abhisheksati.mydoc.util
 
-import android.util.Log
 import androidx.annotation.StringRes
 import com.abhisheksati.mydoc.R
 import java.io.FileNotFoundException
@@ -22,7 +21,9 @@ object UserMessages {
 
     /** Message for a failed read, with the real cause logged rather than displayed. */
     fun readFailure(tag: String, cause: Throwable?): UiText {
-        Log.w(tag, "Read failed", cause)
+        // SecureLog strips throwable messages and stack traces in release: both carry user paths.
+        if (cause == null) SecureLog.warn(tag, "Read failed")
+        else SecureLog.warn(tag, "Read failed", cause)
         val text = cause?.message.orEmpty()
         return when {
             // DocumentLoadException messages are authored copy naming a real cause, not stack noise.
@@ -45,7 +46,8 @@ object UserMessages {
      * anything else instead of putting it on screen.
      */
     fun actionFailed(@StringRes actionRes: Int, cause: Throwable?, tag: String = "Files"): UiText {
-        Log.w(tag, "action failed (res $actionRes)", cause)
+        if (cause == null) SecureLog.warn(tag, "File action failed (res $actionRes)")
+        else SecureLog.warn(tag, "File action failed (res $actionRes)", cause)
         val action = UiText.Res(actionRes)
         if (cause is com.abhisheksati.mydoc.domain.model.PartialStorageOperationException) {
             // Some items did land. Saying only "failed" would send people back to retry work

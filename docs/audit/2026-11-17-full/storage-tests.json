@@ -1,0 +1,122 @@
+[
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/data/local/ExternalStorageContainmentOnDeviceTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/data/local/MigrationTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/data/local/OfflineCopySidecarOnDeviceTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/data/repository/StorageMoveTrashOnDeviceTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/discovery/DiscoveryOnDeviceTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/domain/model/MediaItemLocaleTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/util/DocumentSiblingsOnDeviceTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/util/LocalApkInstallerOnDeviceTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/data/local/ExternalStoragePathContainmentTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/data/local/MigrationTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/data/local/OfflineCopyPolicyTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/data/local/SettingsRepositorySurfaceTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/data/repository/LibraryRepositoryTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/data/repository/StorageMoveSpaceTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/data/repository/StorageMoveTrashSafetyTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/data/repository/StorageOperationSafetyTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/data/repository/StorageRepositoryTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/discovery/DiscoveryRulesTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/domain/model/DocumentFileTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/domain/model/DocumentFilterTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/domain/model/DocumentFormatsTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/domain/model/FormattingLocaleTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/domain/model/LibraryItemTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/domain/model/StorageItemTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/update/ApkDownloaderTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/update/PackageInstallerHelperTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/update/UpdateManagerStateTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/update/UpdateManagerTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/util/DocumentIdentityTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/util/SecureLogTest.kt",
+    "coverage": "full"
+  }
+]

@@ -3,6 +3,7 @@ package com.abhisheksati.mydoc.discovery
 import android.content.Context
 import android.net.Uri
 import com.abhisheksati.mydoc.util.DocumentIdentity
+import com.abhisheksati.mydoc.util.SecureLog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,7 +35,11 @@ object SearchIndexQueue {
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
-            } catch (_: Exception) {
+            } catch (failure: Exception) {
+                // Indexing retries the next time the document opens, but swallowing the failure
+                // made a document that could never be indexed simply absent from search with
+                // no trace to diagnose it from.
+                SecureLog.warn("IndexQueue", "Background index failed", failure)
             } finally {
                 queued.remove(uri)
             }

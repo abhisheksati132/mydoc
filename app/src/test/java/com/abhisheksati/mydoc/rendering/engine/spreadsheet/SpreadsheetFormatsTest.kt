@@ -3,6 +3,7 @@ package com.abhisheksati.mydoc.rendering.engine.spreadsheet
 import com.abhisheksati.mydoc.domain.model.DocumentLoadException
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -118,6 +119,49 @@ class SpreadsheetFormatsTest {
         assertEquals("row", sheet.getCellValue(1, 0))
         assertEquals("the repeated row must be reproduced", "row", sheet.getCellValue(2, 0))
         assertEquals("the row after a run must land after it", "last", sheet.getCellValue(3, 0))
+    }
+
+    private val repeatedRowDocument = { repeatCount: Int ->
+        """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <office:document xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
+                             xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0"
+                             xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0">
+              <office:body><office:spreadsheet>
+                <table:table table:name="Long">
+                  <table:table-row>
+                    <table:table-cell><text:p>header</text:p></table:table-cell>
+                  </table:table-row>
+                  <table:table-row table:number-rows-repeated="$repeatCount">
+                    <table:table-cell><text:p>data</text:p></table:table-cell>
+                  </table:table-row>
+                </table:table>
+              </office:spreadsheet></office:body>
+            </office:document>
+        """.trimIndent()
+    }
+
+    @Test
+    fun fods_rowRepeatBeyondTheSafetyCapMarksTheSheetPartial() {
+        // A repeated row is expanded up to a cap so one attribute cannot inflate the grid
+        // without bound. The clipped copies used to disappear silently, so the sheet was
+        // presented as complete while rows were missing.
+        val model = parseText(repeatedRowDocument(600), "fods")
+        val sheet = model.sheets.single()
+
+        assertTrue("a clipped repeated range must mark the sheet partial", sheet.truncated)
+        assertTrue(model.isPartial)
+        assertEquals("rows up to the cap are still present", "data", sheet.getCellValue(500, 0))
+        assertEquals("rows past the cap are not invented", "", sheet.getCellValue(501, 0))
+    }
+
+    @Test
+    fun fods_rowRepeatUnderTheCapStaysComplete() {
+        val model = parseText(repeatedRowDocument(3), "fods")
+        val sheet = model.sheets.single()
+
+        assertFalse("a repeat the cap covers is not a truncation", sheet.truncated)
+        assertEquals("data", sheet.getCellValue(3, 0))
     }
 
     private val flatOdf = """

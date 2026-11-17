@@ -69,10 +69,15 @@ object NotesExporter {
                 writer.spacer(8f)
             }
         }
-        writer.finish()
         val file = outputFile(context, documentName, "pdf")
-        file.outputStream().use { document.writeTo(it) }
-        document.close()
+        // PdfDocument holds native page buffers; an I/O failure (full disk, revoked path)
+        // must not skip their release.
+        try {
+            writer.finish()
+            file.outputStream().use { document.writeTo(it) }
+        } finally {
+            document.close()
+        }
         return file
     }
 

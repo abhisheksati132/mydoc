@@ -275,6 +275,69 @@ class StorageRepositoryTest {
         assertEquals("Version 1", copy1.readText())
     }
 
+    @Test
+    fun copyAndDeleteTreatDirectoryLinksAsLeaves() = runBlocking {
+        val root = tempFolder.root
+        val repo = StorageRepositoryImpl(mockContext())
+
+        // Content outside the selected tree that a followed link would reach.
+        val outside = File(root, "OutsideTree").apply { mkdirs() }
+        val sentinel = File(outside, "sentinel.txt").apply { writeText("must survive") }
+
+        val source = File(root, "LinkedSource").apply { mkdirs() }
+        File(source, "inside.txt").apply { writeText("inside") }
+        val link = File(source, "linked")
+        org.junit.Assume.assumeTrue(
+            "Directory links are not permitted on this filesystem",
+            runCatching { java.nio.file.Files.createSymbolicLink(link.toPath(), outside.toPath()) }.isSuccess
+        )
+
+        // Copy must recreate the link, not duplicate (or follow) the external tree.
+        val copyDest = File(root, "CopyDest").apply { mkdirs() }
+        val copyRes = repo.copy(listOf(source), copyDest)
+        assertTrue(copyRes.isSuccess)
+        val copiedTree = File(copyDest, "LinkedSource")
+        assertTrue(java.nio.file.Files.isSymbolicLink(File(copiedTree, "linked").toPath()))
+        assertEquals("must survive", sentinel.readText())
+
+        // Deleting the source tree must remove the link entry, never the external target.
+        val deleteRes = repo.delete(listOf(source))
+        assertTrue(deleteRes.isSuccess)
+        assertFalse(link.exists())
+        assertTrue(sentinel.exists())
+        assertEquals("must survive", sentinel.readText())
+    }
+
+    @Test
+    fun failedZipExtractionRestoresFilesReplacedBeforeTheFailure() = runBlocking {
+        val root = tempFolder.root
+        val repo = StorageRepositoryImpl(mockContext())
+
+        val destination = File(root, "UnzipTarget").apply { mkdirs() }
+        val original = File(destination, "doc.txt").apply { writeText("original content") }
+
+        val zip = File(root, "hostile.zip")
+        java.util.zip.ZipOutputStream(zip.outputStream()).use { out ->
+            out.putNextEntry(java.util.zip.ZipEntry("doc.txt"))
+            out.write("archive content".toByteArray())
+            out.closeEntry()
+            // Second entry escapes the destination, failing after doc.txt was replaced.
+            out.putNextEntry(java.util.zip.ZipEntry("../escape.txt"))
+            out.write("escape".toByteArray())
+            out.closeEntry()
+        }
+
+        val result = repo.unzip(zip, destination, ZipCollisionStrategy.REPLACE)
+        assertTrue(result.isFailure)
+        assertEquals("original content", original.readText())
+        assertFalse(File(root, "escape.txt").exists())
+        assertEquals(
+            "replaced originals' backups must be cleaned up",
+            listOf("doc.txt"),
+            destination.listFiles()?.map { it.name }?.sorted()
+        )
+    }
+
     private fun mockContext(): android.content.Context {
         val root = tempFolder.root
         return object : android.content.ContextWrapper(null) {

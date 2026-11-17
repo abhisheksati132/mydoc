@@ -179,7 +179,10 @@ fun PdfViewerScreen(
         }
     }
 
-    var bookmarks by remember {
+    // Keyed to the document: the same screen instance shows the next document when the
+    // reader swipes, and an unkeyed remember kept the previous document's bookmarks (and
+    // its bookmark indicator) until the first toggle re-read them.
+    var bookmarks by remember(document.uri) {
         mutableStateOf(app?.settingsRepository?.getBookmarks(document.uri) ?: emptySet())
     }
     val isCurrentBookmarked = bookmarks.contains(state.currentPage)

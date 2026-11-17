@@ -101,21 +101,28 @@ fun FreeCornersCropperDialog(
     modifier: Modifier = Modifier,
     accentColor: Color = LightAppColors.accent
 ) {
+    // Rotate recycles the previous bitmap; Auto-fit and Apply read it on Dispatchers.Default.
+    // While either worker runs, the controls that would recycle or dismiss that bitmap are
+    // disabled, so a worker can never be handed recycled pixel storage.
+    var isWorking by remember { mutableStateOf(false) }
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isWorking) onDismiss() },
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             decorFitsSystemWindows = false
         )
     ) {
         OverlaySystemBars()
-        BackHandler(onBack = onDismiss)
+        BackHandler(enabled = !isWorking, onBack = onDismiss)
 
         var currentBitmap by remember { mutableStateOf(bitmap) }
         var createdBitmaps by remember { mutableStateOf(listOf<Bitmap>()) }
         var deliveredBitmap by remember { mutableStateOf<Bitmap?>(null) }
         DisposableEffect(bitmap) {
             onDispose {
+                // A worker still reading a bitmap must not have its pixels recycled underneath it;
+                // if the dialog goes away mid-job, leave those bitmaps to the GC.
+                if (isWorking) return@onDispose
                 createdBitmaps.forEach { candidate ->
                     if (candidate !== bitmap && candidate !== deliveredBitmap && !candidate.isRecycled) {
                         candidate.recycle()
@@ -143,7 +150,7 @@ fun FreeCornersCropperDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onDismiss) {
+                    IconButton(onClick = onDismiss, enabled = !isWorking) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = stringResource(R.string.action_cancel),
@@ -158,6 +165,7 @@ fun FreeCornersCropperDialog(
                     )
 
                     IconButton(
+                        enabled = !isWorking,
                         onClick = {
                             val previous = currentBitmap
                             val rotated = BitmapRotation.rotate(previous, 90)
@@ -186,6 +194,8 @@ fun FreeCornersCropperDialog(
                     FreeCornersCropperCanvas(
                         bitmap = currentBitmap,
                         accentColor = accentColor,
+                        isWorking = isWorking,
+                        onWorkingChanged = { isWorking = it },
                         onCropped = onCropped,
                         onDelivered = { deliveredBitmap = it }
                     )
@@ -199,6 +209,8 @@ fun FreeCornersCropperDialog(
 private fun FreeCornersCropperCanvas(
     bitmap: Bitmap,
     accentColor: Color,
+    isWorking: Boolean,
+    onWorkingChanged: (Boolean) -> Unit,
     onCropped: (Bitmap) -> Unit,
     onDelivered: (Bitmap) -> Unit
 ) {
@@ -637,24 +649,30 @@ private fun FreeCornersCropperCanvas(
 
                 // Smart Document Edge Auto-Snap
                 IconButton(
+                    enabled = !isWorking,
                     onClick = {
                         haptics.confirm()
+                        onWorkingChanged(true)
                         scope.launch {
-                            val autoQuad = withContext(Dispatchers.Default) {
-                                DocumentEdgeDetector.detectDocumentQuad(bitmap)
-                            }
-                            if (autoQuad != null && scaleFactor > 0f) {
-                                quadPoints[0] = Offset(imageBounds.left + autoQuad.topLeft.x * scaleFactor, imageBounds.top + autoQuad.topLeft.y * scaleFactor)
-                                quadPoints[1] = Offset(imageBounds.left + autoQuad.topRight.x * scaleFactor, imageBounds.top + autoQuad.topRight.y * scaleFactor)
-                                quadPoints[2] = Offset(imageBounds.left + autoQuad.bottomRight.x * scaleFactor, imageBounds.top + autoQuad.bottomRight.y * scaleFactor)
-                                quadPoints[3] = Offset(imageBounds.left + autoQuad.bottomLeft.x * scaleFactor, imageBounds.top + autoQuad.bottomLeft.y * scaleFactor)
-                            } else if (imageBounds.width > 0) {
-                                val insetX = imageBounds.width * 0.05f
-                                val insetY = imageBounds.height * 0.05f
-                                quadPoints[0] = Offset(imageBounds.left + insetX, imageBounds.top + insetY)
-                                quadPoints[1] = Offset(imageBounds.right - insetX, imageBounds.top + insetY)
-                                quadPoints[2] = Offset(imageBounds.right - insetX, imageBounds.bottom - insetY)
-                                quadPoints[3] = Offset(imageBounds.left + insetX, imageBounds.bottom - insetY)
+                            try {
+                                val autoQuad = withContext(Dispatchers.Default) {
+                                    DocumentEdgeDetector.detectDocumentQuad(bitmap)
+                                }
+                                if (autoQuad != null && scaleFactor > 0f) {
+                                    quadPoints[0] = Offset(imageBounds.left + autoQuad.topLeft.x * scaleFactor, imageBounds.top + autoQuad.topLeft.y * scaleFactor)
+                                    quadPoints[1] = Offset(imageBounds.left + autoQuad.topRight.x * scaleFactor, imageBounds.top + autoQuad.topRight.y * scaleFactor)
+                                    quadPoints[2] = Offset(imageBounds.left + autoQuad.bottomRight.x * scaleFactor, imageBounds.top + autoQuad.bottomRight.y * scaleFactor)
+                                    quadPoints[3] = Offset(imageBounds.left + autoQuad.bottomLeft.x * scaleFactor, imageBounds.top + autoQuad.bottomLeft.y * scaleFactor)
+                                } else if (imageBounds.width > 0) {
+                                    val insetX = imageBounds.width * 0.05f
+                                    val insetY = imageBounds.height * 0.05f
+                                    quadPoints[0] = Offset(imageBounds.left + insetX, imageBounds.top + insetY)
+                                    quadPoints[1] = Offset(imageBounds.right - insetX, imageBounds.top + insetY)
+                                    quadPoints[2] = Offset(imageBounds.right - insetX, imageBounds.bottom - insetY)
+                                    quadPoints[3] = Offset(imageBounds.left + insetX, imageBounds.bottom - insetY)
+                                }
+                            } finally {
+                                onWorkingChanged(false)
                             }
                         }
                     },
@@ -673,6 +691,7 @@ private fun FreeCornersCropperCanvas(
 
             // Apply Deskew & Crop
             Button(
+                enabled = !isWorking,
                 onClick = {
                     if (scaleFactor > 0f) {
                         // Map 4 screen points to original bitmap coordinates
@@ -682,12 +701,17 @@ private fun FreeCornersCropperCanvas(
                                 y = ((pt.y - imageBounds.top) / scaleFactor).coerceIn(0f, bitmap.height.toFloat())
                             )
                         }
+                        onWorkingChanged(true)
                         scope.launch {
-                            val warped = withContext(Dispatchers.Default) {
-                                FreeCrop.crop(bitmap, pointsInBitmap)
+                            try {
+                                val warped = withContext(Dispatchers.Default) {
+                                    FreeCrop.crop(bitmap, pointsInBitmap)
+                                }
+                                onDelivered(warped)
+                                onCropped(warped)
+                            } finally {
+                                onWorkingChanged(false)
                             }
-                            onDelivered(warped)
-                            onCropped(warped)
                         }
                     }
                 },

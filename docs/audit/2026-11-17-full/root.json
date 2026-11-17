@@ -1,0 +1,522 @@
+[
+  {
+    "path": ".github/dependabot.yml",
+    "coverage": "full"
+  },
+  {
+    "path": ".github/workflows/build.yml",
+    "coverage": "full"
+  },
+  {
+    "path": ".github/workflows/codeql.yml",
+    "coverage": "full"
+  },
+  {
+    "path": ".github/workflows/release.yml",
+    "coverage": "partial"
+  },
+  {
+    "path": "app/build.gradle.kts",
+    "coverage": "partial"
+  },
+  {
+    "path": "app/src/main/cpp/word_guard.c",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/ocr/OcrEngine.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/ocr/OcrResultSheet.kt",
+    "coverage": "partial"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/appmanager/AppManagerHelper.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/cleaner/StorageCleanerManager.kt",
+    "coverage": "partial"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/engine/PdfConversionEngine.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/engine/PdfEditingEngine.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/engine/PdfOptimizationEngine.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/engine/PdfPageOperationsEngine.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/engine/PdfPermissions.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/engine/PdfSecurityEngine.kt",
+    "coverage": "partial"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/engine/PdfToolUtils.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/engine/PdfToolsEngine.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/engine/StitchedImageLayout.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/model/PdfTool.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/model/ToolModels.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/notes/NotesExporter.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/pdf/internal/PdfBoxHelper.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/pdf/pagenumber/PdfPageNumberer.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/pdf/watermark/PdfWatermarker.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/scan/DocumentScannerHelper.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/scan/cropper/BitmapRotation.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/scan/cropper/DocumentEdgeDetector.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/scan/cropper/FreeCornersCropperView.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/scan/cropper/FreeCrop.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/scan/cropper/PerspectiveGrid.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/scan/cropper/Quad.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/scan/filters/ScanFilterEngine.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/security/SignatureStorage.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/tts/DocumentTtsManager.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/tts/TtsPlaybackController.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/tts/TtsPlaybackService.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/ui/ToolRunnerSheet.kt",
+    "coverage": "partial"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/ui/ToolsScreen.kt",
+    "coverage": "partial"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/ui/components/CameraScanSheet.kt",
+    "coverage": "partial"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/ui/components/ReorderPagesSheet.kt",
+    "coverage": "partial"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/ui/components/SignPdfSheet.kt",
+    "coverage": "partial"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/ui/components/ToolOptionsSection.kt",
+    "coverage": "partial"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/tools/viewmodel/ToolsViewModel.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/xml/backup_rules.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/xml/data_extraction_rules.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/xml/file_paths.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "build.gradle.kts",
+    "coverage": "full"
+  },
+  {
+    "path": "gradle.properties",
+    "coverage": "full"
+  },
+  {
+    "path": "gradle/wrapper/gradle-wrapper.properties",
+    "coverage": "full"
+  },
+  {
+    "path": "settings.gradle.kts",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/security/AppLockScreen.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/java/com/abhisheksati/mydoc/security/BiometricLockHelper.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/tools/PdfToolUtilsTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/tools/ToolModelsTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/tools/engine/CappedRenderScaleTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/tools/engine/PdfPermissionsTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/tools/engine/StampIconMappingTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/tools/engine/StitchedImageLayoutTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/tools/scan/cropper/BitmapRotationTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/tools/tts/TtsEngineDisclosureTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "lint-rules/src/main/java/com/abhisheksati/mydoc/lint/MyDocIssueRegistry.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "lint-rules/src/main/java/com/abhisheksati/mydoc/lint/UnlabeledTapTargetDetector.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "macrobenchmark/src/main/java/com/abhisheksati/mydoc/macrobenchmark/BaselineProfileGenerator.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "macrobenchmark/src/main/java/com/abhisheksati/mydoc/macrobenchmark/StartupBenchmark.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "macrobenchmark/src/main/java/com/abhisheksati/mydoc/macrobenchmark/Target.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "macrobenchmark/src/main/java/com/abhisheksati/mydoc/macrobenchmark/ToolsScrollBenchmark.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "PRIVACY.md",
+    "coverage": "full"
+  },
+  {
+    "path": "CONTRIBUTING.md",
+    "coverage": "full"
+  },
+  {
+    "path": "scripts/release-smoke.sh",
+    "coverage": "full"
+  },
+  {
+    "path": "scripts/run-device-tests.sh",
+    "coverage": "full"
+  },
+  {
+    "path": "lint-rules/build.gradle.kts",
+    "coverage": "full"
+  },
+  {
+    "path": "app/lint.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "macrobenchmark/build.gradle.kts",
+    "coverage": "full"
+  },
+  {
+    "path": "app/build.gradle.kts",
+    "coverage": "full"
+  },
+  {
+    "path": "README.md",
+    "coverage": "full"
+  },
+  {
+    "path": "THIRD_PARTY_NOTICES.md",
+    "coverage": "full"
+  },
+  {
+    "path": "app/proguard-rules.pro",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/DeviceCaptures.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/benchmark/ScrollBenchmarkTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/AndroidManifest.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/e2e/DataIntegrityCleanerE2ETest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/e2e/OfficeDocumentParsingE2ETest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/e2e/PdfToolsCorrectnessE2ETest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/e2e/ReleaseQualityGateE2ETest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/e2e/ViewerLifecycleExperienceE2ETest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/e2e/fixtures/SyntheticDocumentFactory.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "docs/WORD_ENGINE.md",
+    "coverage": "full"
+  },
+  {
+    "path": "gradle/libs.versions.toml",
+    "coverage": "full"
+  },
+  {
+    "path": "lint-rules/src/test/java/com/abhisheksati/mydoc/lint/UnlabeledTapTargetDetectorTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "office-engine/build.gradle.kts",
+    "coverage": "full"
+  },
+  {
+    "path": "office-engine/src/main/AndroidManifest.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "scripts/prepare_word_engine.py",
+    "coverage": "full"
+  },
+  {
+    "path": "third_party/libreoffice/README.md",
+    "coverage": "full"
+  },
+  {
+    "path": "third_party/libreoffice/engine.lock.json",
+    "coverage": "full"
+  },
+  {
+    "path": ".github/release-request.json",
+    "coverage": "full"
+  },
+  {
+    "path": ".github/workflows/release.yml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/keystore/README.md",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/benchmark/AndroidManifest.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/debug/AndroidManifest.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/debug/java/com/abhisheksati/mydoc/ui/files/DialogHostActivity.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "office-engine/proguard-rules.pro",
+    "coverage": "full"
+  },
+  {
+    "path": "gradlew",
+    "coverage": "full"
+  },
+  {
+    "path": "gradlew.bat",
+    "coverage": "full"
+  },
+  {
+    "path": "improvement.md",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/i18n/PluralsResourcesTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/drawable/ic_launcher_background.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/drawable/ic_launcher_foreground.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/drawable/ic_launcher_monochrome.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/drawable/ic_shortcut_merge.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/drawable/ic_shortcut_search.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/drawable/ic_tile_scanner.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/drawable/widget_row.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/drawable/widget_seal_dot.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/drawable/widget_surface.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/values/colors.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/values-night/colors.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/values/themes.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/values-night/themes.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/values-v31/themes.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/layout/widget_continue_reading.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/xml/network_security_config.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/main/res/xml/continue_reading_widget_info.xml",
+    "coverage": "full"
+  },
+  {
+    "path": "assets/brand/launch-banner.html",
+    "coverage": "full"
+  },
+  {
+    "path": "assets/brand/readme-hero-dark.svg",
+    "coverage": "full"
+  },
+  {
+    "path": "assets/brand/readme-hero-light.svg",
+    "coverage": "full"
+  },
+  {
+    "path": "assets/brand/download-mydoc.svg",
+    "coverage": "full"
+  },
+  {
+    "path": "third_party/libreoffice/license_plain_text.xsl",
+    "coverage": "full"
+  }
+]

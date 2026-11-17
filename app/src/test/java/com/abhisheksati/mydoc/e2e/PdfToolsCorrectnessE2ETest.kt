@@ -85,10 +85,15 @@ class PdfToolsCorrectnessE2ETest {
         val resultFile = optimizationEngine.compressPdf(testPdf, options) { }
 
         assertTrue(resultFile.exists())
-        val outputContent = resultFile.readText()
-        // Text stream must be preserved and not silently rasterized into pure pixels
-        assertTrue("Searchable text must not be flattened or wiped during compression",
-            outputContent.contains("CONFIDENTIAL_PROJECT_OMEGA_12345") || outputContent.contains("%PDF"))
+        // Reparse the output with the same PDF library the app ships: a raw byte search would
+        // accept any PDF at all, including one whose text stream was stripped.
+        val extractedText = com.tom_roush.pdfbox.pdmodel.PDDocument.load(resultFile).use { doc ->
+            com.tom_roush.pdfbox.text.PDFTextStripper().getText(doc)
+        }
+        assertTrue(
+            "Searchable text must survive compression; extracted: $extractedText",
+            extractedText.contains(uniqueKeyword)
+        )
     }
 
     // =========================================================================
@@ -103,7 +108,10 @@ class PdfToolsCorrectnessE2ETest {
 
         val unicodeWatermark = "CONFIDENTIEL - PROPRIÉTAIRE - 机密 - गोपनीय"
 
-        // Calling applyText with Unicode text
+        // The Unicode branch draws through Android graphics, which a JVM unit test cannot
+        // execute. Only the two known environment artifacts may stand in for a result: a stub
+        // RuntimeException or a null Bitmap from the stubbed factory. A validation failure or
+        // I/O error in the production path must fail this test.
         try {
             PdfWatermarker.applyText(
                 context = mockContext,
@@ -114,9 +122,9 @@ class PdfToolsCorrectnessE2ETest {
             )
             assertTrue("Watermarked destination file must be written", destPdf.exists())
             assertTrue("Watermarked file size must be > 0", destPdf.length() > 0)
-        } catch (_: Exception) {
-            // Android Canvas / Typeface stub in unit tests may throw stub exception,
-            // which verifies the Unicode code-path was entered rather than ASCII space substitution!
+        } catch (e: RuntimeException) {
+            val stubArtifact = e is NullPointerException || e.message?.startsWith("Stub!") == true
+            assertTrue("Unicode watermarking failed for a reason other than the JVM graphics stub: $e", stubArtifact)
         }
     }
 
@@ -173,13 +181,10 @@ class PdfToolsCorrectnessE2ETest {
         SyntheticDocumentFactory.createScannedImagePdf(scannedPdf)
 
         val options = ToolOptions(redactQuery = "Account Number")
-        try {
-            securityEngine.redactPdf(scannedPdf, options) { }
-            fail("Redact on scanned document without text layer must fail or warn user")
-        } catch (e: Exception) {
-            // Must catch failure rather than claiming successful text redaction
-            assertTrue(e is IllegalArgumentException || e is IllegalStateException)
-        }
+        val failure = runCatching { securityEngine.redactPdf(scannedPdf, options) { } }.exceptionOrNull()
+        assertNotNull("Redact must not claim success on a scanned document with no text layer", failure)
+        assertTrue("Must fail with a user-facing rejection, got $failure",
+            failure is IllegalArgumentException || failure is IllegalStateException)
     }
 
     // =========================================================================
@@ -267,13 +272,10 @@ class PdfToolsCorrectnessE2ETest {
         val zeroPagePdf = File(rootDir, "broken_zero_page.pdf")
         SyntheticDocumentFactory.createCorruptedPdf(zeroPagePdf)
 
-        try {
-            optimizationEngine.repairPdf(zeroPagePdf) { }
-            fail("Repairing an unrecoverable corrupted PDF must throw IllegalStateException rather than creating 0-page corrupt output")
-        } catch (e: Exception) {
-            assertTrue("Must reject zero page recovery with explicit exception",
-                e is IllegalStateException || e is IllegalArgumentException)
-        }
+        val failure = runCatching { optimizationEngine.repairPdf(zeroPagePdf) { } }.exceptionOrNull()
+        assertNotNull("Repairing an unrecoverable corrupted PDF must fail rather than create 0-page output", failure)
+        assertTrue("Must reject zero page recovery with an explicit exception, got $failure",
+            failure is IllegalStateException || failure is IllegalArgumentException)
     }
 
     // =========================================================================
@@ -298,13 +300,12 @@ class PdfToolsCorrectnessE2ETest {
             lastOpenedTimestamp = System.currentTimeMillis()
         )
 
-        // PrintHelper.printDocument with non-PDF must refuse to print
-        try {
-            PrintHelper.printDocument(mockContext, nonPdfDoc)
-            // If executed in unit test, toast will be called without throwing unhandled exceptions
-        } catch (_: Exception) {
-            // Expected in stubbed environment
-        }
+        // PrintHelper.printDocument with non-PDF must refuse and say why instead of spooling
+        var refusalMessage: String? = null
+        PrintHelper.printDocument(mockContext, nonPdfDoc) { refusalMessage = it }
+        assertNotNull("Non-PDF print must be refused with an explanation", refusalMessage)
+        assertTrue("Refusal must say only PDF prints directly, got: $refusalMessage",
+            refusalMessage!!.contains("only supported for PDF", ignoreCase = true))
     }
 
     // =========================================================================
@@ -320,13 +321,9 @@ class PdfToolsCorrectnessE2ETest {
 
         // Step 2: Crop margins
         val cropOptions = ToolOptions(cropMarginPercent = 0.05f)
-        try {
-            val croppedFile = pageOperationsEngine.cropPdf(contractPdf, cropOptions) { }
-            assertTrue(croppedFile.exists())
-            assertTrue(croppedFile.length() > 0)
-        } catch (_: Exception) {
-            // PdfBox stub
-        }
+        val croppedFile = pageOperationsEngine.cropPdf(contractPdf, cropOptions) { }
+        assertTrue("Cropped file must exist", croppedFile.exists())
+        assertTrue("Cropped file must have content", croppedFile.length() > 0)
 
         // Step 3: Compress document
         val compressOptions = ToolOptions()

@@ -260,7 +260,9 @@ class PdfSecurityEngine(private val context: Context) {
                         throw IllegalArgumentException("Cannot sanitize an encrypted document. Unlock the PDF before stripping metadata.")
                     }
                     doc.documentCatalog?.metadata = null
-                    doc.documentCatalog?.structureTreeRoot = null
+                    // The structure tree is the tagged reading order and alternate text, not
+                    // metadata: clearing it stripped accessibility information from exactly the
+                    // documents that carry it. Only authoring properties are purged here.
                     doc.documentInformation = PDDocumentInformation().apply {
                         author = null
                         title = null

@@ -1,0 +1,556 @@
+{
+  "target_commit": "6bf34ca6feee75f4fcfb9f1fe5afc189f1abec38",
+  "production_files": [
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/CrashLog.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/AppDatabase.kt",
+      "production_review": "full",
+      "notes": "Entire file read in chunks of at most 100 lines."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/dao/FavoriteDao.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/dao/HighlightDao.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/dao/MediaPlaybackDao.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/dao/RecentDao.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/dao/TrashDao.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/dao/ViewStateDao.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/DocumentStreamResolver.kt",
+      "production_review": "full",
+      "notes": "Entire file reviewed in <=100-line chunks; major filesystem flows traced."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/entity/FavoriteDocumentEntity.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/entity/HighlightEntity.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/entity/MediaPlaybackEntity.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/entity/RecentDocumentEntity.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/entity/TrashEntity.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/entity/ViewStateEntity.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/ExplorerArchive.kt",
+      "production_review": "full",
+      "notes": "Entire file read in chunks of at most 100 lines."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/ExplorerClipboard.kt",
+      "production_review": "full",
+      "notes": "Entire file read in chunks of at most 100 lines."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/ExplorerComparison.kt",
+      "production_review": "full",
+      "notes": "Entire file read in chunks of at most 100 lines."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/ExplorerFolderInsights.kt",
+      "production_review": "full",
+      "notes": "Entire file read in chunks of at most 100 lines."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/ExplorerPreferences.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/ExplorerRename.kt",
+      "production_review": "full",
+      "notes": "Entire file read in chunks of at most 100 lines."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/ExplorerSearch.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/ExplorerTransfers.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/ExplorerZipExtraction.kt",
+      "production_review": "full",
+      "notes": "Entire file read in chunks of at most 100 lines."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/OfflineCopyPolicy.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/PinnedFoldersManager.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/SettingsRepository.kt",
+      "production_review": "full",
+      "notes": "Entire file read in chunks of at most 100 lines."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/local/StoragePermissionHelper.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/repository/DocumentRepositoryImpl.kt",
+      "production_review": "full",
+      "notes": "Entire file read in chunks of at most 100 lines."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/repository/EntryMutator.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/repository/LibraryRepositoryImpl.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/repository/MediaRepositoryImpl.kt",
+      "production_review": "full",
+      "notes": "Entire file read in chunks of at most 100 lines."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/data/repository/StorageRepositoryImpl.kt",
+      "production_review": "full",
+      "notes": "Entire file reviewed in <=100-line chunks; major filesystem flows traced."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/discovery/DiscoveryScreen.kt",
+      "production_review": "full",
+      "notes": "Entire file read in chunks of at most 100 lines."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/discovery/DiscoveryStore.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/discovery/DocumentIndexer.kt",
+      "production_review": "full",
+      "notes": "Entire file read in chunks of at most 100 lines."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/discovery/SearchIndexQueue.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/discovery/SelectedDocument.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/AppRelease.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/DocumentCategory.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/DocumentFile.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/DocumentFilter.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/DocumentFormats.kt",
+      "production_review": "full",
+      "notes": "Entire file read in chunks of at most 100 lines."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/DocumentLoadException.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/DocumentTypeFilter.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/ExplorerModels.kt",
+      "production_review": "full",
+      "notes": "Entire file read in chunks of at most 100 lines."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/ExplorerPreferencesModels.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/ExplorerToolsModels.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/FileManagerModels.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/FolderComparison.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/HomeTab.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/LibraryItem.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/MediaItem.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/PartialStorageOperationException.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/ReadingMode.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/ReadingPrefs.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/StorageItem.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/StorageVolume.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/TrashItem.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/model/ViewState.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/repository/DocumentRepository.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/repository/LibraryRepository.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/repository/MediaRepository.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/domain/repository/StorageRepository.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/LauncherShortcuts.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/MainActivity.kt",
+      "production_review": "full",
+      "notes": "Entire file read in chunks of at most 100 lines."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/MyDocApp.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/tiles/ScanTileService.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/update/ApkDownloader.kt",
+      "production_review": "full",
+      "notes": "Entire file read and primary execution paths traced."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/update/GitHubUpdateService.kt",
+      "production_review": "full",
+      "notes": "Entire file read and primary execution paths traced."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/update/PackageInstallerHelper.kt",
+      "production_review": "full",
+      "notes": "Entire file read and primary execution paths traced."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/update/UpdateManager.kt",
+      "production_review": "full",
+      "notes": "Entire file read and primary execution paths traced."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/util/DocumentIdentity.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/util/DocumentSiblings.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/util/IoStreams.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/util/LocalApkInstaller.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/util/SecureLog.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/util/ShareIntents.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/util/UiText.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/util/UserMessages.kt",
+      "production_review": "full",
+      "notes": "Entire file read."
+    },
+    {
+      "file": "app/src/main/java/com/abhisheksati/mydoc/widget/ContinueReadingWidget.kt",
+      "production_review": "full",
+      "notes": "Entire file read and primary execution paths traced."
+    }
+  ],
+  "related_tests": [
+    {
+      "file": "app/src/androidTest\\java\\com\\abhisheksati\\mydoc\\data\\local\\ExternalStorageContainmentOnDeviceTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/androidTest\\java\\com\\abhisheksati\\mydoc\\data\\local\\MigrationTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/androidTest\\java\\com\\abhisheksati\\mydoc\\data\\local\\OfflineCopySidecarOnDeviceTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/androidTest\\java\\com\\abhisheksati\\mydoc\\data\\repository\\StorageMoveTrashOnDeviceTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/androidTest\\java\\com\\abhisheksati\\mydoc\\discovery\\DiscoveryOnDeviceTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/androidTest\\java\\com\\abhisheksati\\mydoc\\domain\\model\\MediaItemLocaleTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/androidTest\\java\\com\\abhisheksati\\mydoc\\util\\DocumentSiblingsOnDeviceTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/androidTest\\java\\com\\abhisheksati\\mydoc\\util\\LocalApkInstallerOnDeviceTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\data\\local\\ExternalStoragePathContainmentTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\data\\local\\MigrationTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\data\\local\\OfflineCopyPolicyTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\data\\local\\SettingsRepositorySurfaceTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\data\\repository\\LibraryRepositoryTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\data\\repository\\StorageMoveSpaceTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\data\\repository\\StorageMoveTrashSafetyTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\data\\repository\\StorageOperationSafetyTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\data\\repository\\StorageRepositoryTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\discovery\\DiscoveryRulesTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\domain\\model\\DocumentFileTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\domain\\model\\DocumentFilterTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\domain\\model\\DocumentFormatsTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\domain\\model\\FormattingLocaleTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\domain\\model\\LibraryItemTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\domain\\model\\StorageItemTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\e2e\\DataIntegrityCleanerE2ETest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\tools\\cleaner\\StorageCleanerCategoryDedupeTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\tools\\cleaner\\StorageCleanerDeleteTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\tools\\cleaner\\StorageCleanerManagerTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\tools\\cleaner\\StorageCleanerSkipDisclosureTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\tools\\PdfToolUtilsTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\update\\ApkDownloaderTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\update\\PackageInstallerHelperTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\update\\UpdateManagerStateTest.kt",
+      "review": "full"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\update\\UpdateManagerTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\util\\DocumentIdentityTest.kt",
+      "review": "inventoried_only"
+    },
+    {
+      "file": "app/src/test\\java\\com\\abhisheksati\\mydoc\\util\\SecureLogTest.kt",
+      "review": "inventoried_only"
+    }
+  ]
+}

@@ -194,10 +194,16 @@ class PdfOptimizationEngine(private val context: Context) {
                     val w = (b.x1 - b.x0).toInt().coerceAtLeast(1)
                     val h = (b.y1 - b.y0).toInt().coerceAtLeast(1)
 
+                    // The raster fallback renders every page; an oversized page box at a fixed
+                    // scale can exhaust the heap before compression even starts.
+                    val renderScale = cappedRenderScale(b.x1 - b.x0, b.y1 - b.y0, 0.85f)
                     val pixmap = page.toPixmap(Matrix(renderScale, renderScale), ColorSpace.DeviceRGB, false)
-                    val bmp = Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
-                    pixmap.destroy()
-                    page.destroy()
+                    val bmp = try {
+                        Bitmap.createBitmap(pixmap.pixels, pixmap.width, pixmap.height, Bitmap.Config.ARGB_8888)
+                    } finally {
+                        pixmap.destroy()
+                        page.destroy()
+                    }
 
                     val pageInfo = AndroidPdfDocument.PageInfo.Builder(w, h, p + 1).create()
                     val aPage = outDoc.startPage(pageInfo)

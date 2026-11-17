@@ -338,6 +338,9 @@ class SpreadsheetParser {
             // following coordinates instead of being dropped.
             val rowValues = mutableListOf<Pair<Int, String>>()
             var cells = mutableMapOf<Pair<Int, Int>, String>()
+            // Set when a safety cap clipped a repeated range so the sheet is marked partial
+            // instead of silently showing fewer rows or cells than the file holds.
+            var sheetTruncated = false
             val cellTextBuilder = StringBuilder()
 
             while (eventType != XmlPullParser.END_DOCUMENT) {
@@ -356,6 +359,7 @@ class SpreadsheetParser {
                                 rowIndex = 0
                                 maxRow = 0
                                 maxCol = 0
+                                sheetTruncated = false
                             }
                             name.equals("table-row", ignoreCase = true) -> {
                                 inRow = true
@@ -394,9 +398,13 @@ class SpreadsheetParser {
                                 val text = cellTextBuilder.toString().trim()
                                 if (text.isNotEmpty()) {
                                     val insertCount = minOf(curRepeatCols, maxOf(0, maxOdsColumns - colIndex))
+                                    if (insertCount < curRepeatCols) sheetTruncated = true
                                     for (r in 0 until insertCount) {
                                         val col = colIndex + r
-                                        if (cells.size >= maxOdsCells) break
+                                        if (cells.size >= maxOdsCells) {
+                                            sheetTruncated = true
+                                            break
+                                        }
                                         cells[Pair(rowIndex, col)] = text
                                         rowValues.add(col to text)
                                     }
@@ -412,8 +420,14 @@ class SpreadsheetParser {
                                 // A repeated row is the same row N times; its values were dropped
                                 // entirely before, so every following row moved up.
                                 val insertRows = if (rowValues.isNotEmpty()) minOf(curRepeatRows, 500) else 1
+                                // The cap keeps a repeated data row from expanding into the cell
+                                // budget, but the clipped copies hold data the sheet no longer has.
+                                if (insertRows < curRepeatRows && rowValues.isNotEmpty()) sheetTruncated = true
                                 for (r in 1 until insertRows) {
-                                    if (cells.size >= maxOdsCells) break
+                                    if (cells.size >= maxOdsCells) {
+                                        sheetTruncated = true
+                                        break
+                                    }
                                     for ((col, value) in rowValues) {
                                         cells[Pair(rowIndex + r, col)] = value
                                     }
@@ -431,7 +445,8 @@ class SpreadsheetParser {
                                             name = currentSheetName,
                                             maxRow = maxRow,
                                             maxCol = maxCol,
-                                            cells = cells.toMap()
+                                            cells = cells.toMap(),
+                                            truncated = sheetTruncated
                                         )
                                     )
                                 }

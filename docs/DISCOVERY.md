@@ -8,7 +8,7 @@ The private SQLite FTS4 index stores page text and metadata on device, excluding
 
 ## Scope and limits
 
-- Up to 1,000 selected files. Folder traversal stops at 200 files or 12 directory levels; the completion message reports the limit. Add more folders/batches explicitly.
+- Up to 1,000 selected files. Folder traversal visits at most 200 folders and 12 directory levels; the completion message reports the limit. Add more folders/batches explicitly.
 - Source documents are limited to 16 MiB, including providers with unknown/misreported sizes. Text reads stop at 200,000 characters. Page-based formats stop at 200 pages / 200,000 characters and report partial coverage.
 - PDF, EPUB, FB2 and XPS use the existing reader; supported Word/Excel/PowerPoint formats use offline LibreOffice page conversion. For Excel, only rendered print areas and visible sheets are indexed, not hidden cells or cells outside those print areas. Plain text, Markdown, CSV/TSV, logs, JSON/XML and HTML use bounded text reads. HTML is indexed as source text, not executed.
 - Password-protected documents are not text-indexed. Scanned pages without text require the separate OCR workflow. Unsupported formats remain available for filename search and tagging with an explicit name-only status.

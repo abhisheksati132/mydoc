@@ -13,6 +13,32 @@ import java.util.zip.ZipOutputStream
 object SyntheticDocumentFactory {
 
     /**
+     * Assembles objects 1..N with a byte-accurate xref table. The old fixtures wrote invented
+     * offsets (i * 60) and a constant startxref, so every "nominal" test was silently exercising
+     * a parser's repair path instead of the ordinary read path.
+     */
+    private fun assemblePdf(objects: List<String>): ByteArray {
+        val out = ByteArrayOutputStream()
+        fun emit(text: String) = out.write(text.toByteArray(Charsets.UTF_8))
+
+        emit("%PDF-1.4\n")
+        val offsets = IntArray(objects.size)
+        objects.forEachIndexed { index, body ->
+            offsets[index] = out.size()
+            emit("${index + 1} 0 obj\n")
+            emit(body)
+            emit("\nendobj\n")
+        }
+        val xrefOffset = out.size()
+        emit("xref\n0 ${objects.size + 1}\n")
+        emit("0000000000 65535 f \n")
+        offsets.forEach { emit(String.format("%010d 00000 n \n", it)) }
+        emit("trailer\n<< /Size ${objects.size + 1} /Root 1 0 R >>\n")
+        emit("startxref\n$xrefOffset\n%%EOF\n")
+        return out.toByteArray()
+    }
+
+    /**
      * Generates a valid standard PDF with embedded text streams.
      */
     fun createValidPdf(
@@ -22,52 +48,23 @@ object SyntheticDocumentFactory {
     ): File {
         target.parentFile?.mkdirs()
         val safeText = text.replace("(", "").replace(")", "").replace("\\", "")
-        val pdfContent = buildString {
-            appendLine("%PDF-1.4")
-            appendLine("1 0 obj")
-            appendLine("<< /Type /Catalog /Pages 2 0 R >>")
-            appendLine("endobj")
-            appendLine("2 0 obj")
-            val kids = (1..pageCount).joinToString(" ") { "${it * 2 + 1} 0 R" }
-            appendLine("<< /Type /Pages /Kids [$kids] /Count $pageCount >>")
-            appendLine("endobj")
+        val fontObjId = pageCount * 2 + 3
+        val objects = mutableListOf<String>()
 
-            var objId = 3
-            for (p in 1..pageCount) {
-                val pageObjId = objId
-                val contentObjId = objId + 1
-                objId += 2
+        objects += "<< /Type /Catalog /Pages 2 0 R >>"
+        val kids = (1..pageCount).joinToString(" ") { "${it * 2 + 1} 0 R" }
+        objects += "<< /Type /Pages /Kids [$kids] /Count $pageCount >>"
 
-                appendLine("$pageObjId 0 obj")
-                appendLine("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents $contentObjId 0 R /Resources << /Font << /F1 ${pageCount * 2 + 3} 0 R >> >> >>")
-                appendLine("endobj")
-
-                val streamData = "BT /F1 12 Tf 50 700 Td ($safeText Page $p) Tj ET"
-                appendLine("$contentObjId 0 obj")
-                appendLine("<< /Length ${streamData.length} >>")
-                appendLine("stream")
-                appendLine(streamData)
-                appendLine("endstream")
-                appendLine("endobj")
-            }
-
-            val fontObjId = pageCount * 2 + 3
-            appendLine("$fontObjId 0 obj")
-            appendLine("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
-            appendLine("endobj")
-            appendLine("xref")
-            appendLine("0 ${fontObjId + 1}")
-            appendLine("0000000000 65535 f ")
-            for (i in 1..fontObjId) {
-                appendLine(String.format("%010d 00000 n ", i * 60))
-            }
-            appendLine("trailer")
-            appendLine("<< /Size ${fontObjId + 1} /Root 1 0 R >>")
-            appendLine("startxref")
-            appendLine("500")
-            appendLine("%%EOF")
+        for (p in 1..pageCount) {
+            val contentObjId = p * 2 + 2
+            objects += "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents $contentObjId 0 R /Resources << /Font << /F1 $fontObjId 0 R >> >> >>"
+            val streamData = "BT /F1 12 Tf 50 700 Td ($safeText Page $p) Tj ET"
+            val streamBytes = streamData.toByteArray(Charsets.UTF_8).size
+            objects += "<< /Length $streamBytes >>\nstream\n$streamData\nendstream"
         }
-        target.writeText(pdfContent)
+
+        objects += "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
+        target.writeBytes(assemblePdf(objects))
         return target
     }
 
@@ -76,37 +73,17 @@ object SyntheticDocumentFactory {
      */
     fun createScannedImagePdf(target: File): File {
         target.parentFile?.mkdirs()
-        val pdfContent = """
-            %PDF-1.4
-            1 0 obj
-            << /Type /Catalog /Pages 2 0 R >>
-            endobj
-            2 0 obj
-            << /Type /Pages /Kids [3 0 R] /Count 1 >>
-            endobj
-            3 0 obj
-            << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>
-            endobj
-            4 0 obj
-            << /Length 30 >>
-            stream
-            q 10 0 0 10 50 50 cm /Im1 Do Q
-            endstream
-            endobj
-            xref
-            0 5
-            0000000000 65535 f 
-            0000000009 00000 n 
-            0000000058 00000 n 
-            0000000115 00000 n 
-            0000000204 00000 n 
-            trailer
-            << /Size 5 /Root 1 0 R >>
-            startxref
-            280
-            %%EOF
-        """.trimIndent()
-        target.writeText(pdfContent)
+        val content = "q 612 0 0 792 0 0 cm /Im1 Do Q"
+        val contentBytes = content.toByteArray(Charsets.UTF_8).size
+        val objects = listOf(
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /XObject << /Im1 5 0 R >> >> /Contents 4 0 R >>",
+            "<< /Length $contentBytes >>\nstream\n$content\nendstream",
+            // 1x1 grayscale pixel; the page's /Im1 reference must resolve to this object.
+            "<< /Type /XObject /Subtype /Image /Width 1 /Height 1 /ColorSpace /DeviceGray /BitsPerComponent 8 /Length 1 >>\nstream\n\u0000\nendstream"
+        )
+        target.writeBytes(assemblePdf(objects))
         return target
     }
 
@@ -124,26 +101,14 @@ object SyntheticDocumentFactory {
      */
     fun createZeroPagePdf(target: File): File {
         target.parentFile?.mkdirs()
-        val content = """
-            %PDF-1.4
-            1 0 obj
-            << /Type /Catalog /Pages 2 0 R >>
-            endobj
-            2 0 obj
-            << /Type /Pages /Kids [] /Count 0 >>
-            endobj
-            xref
-            0 3
-            0000000000 65535 f 
-            0000000009 00000 n 
-            0000000058 00000 n 
-            trailer
-            << /Size 3 /Root 1 0 R >>
-            startxref
-            120
-            %%EOF
-        """.trimIndent()
-        target.writeText(content)
+        target.writeBytes(
+            assemblePdf(
+                listOf(
+                    "<< /Type /Catalog /Pages 2 0 R >>",
+                    "<< /Type /Pages /Kids [] /Count 0 >>"
+                )
+            )
+        )
         return target
     }
 

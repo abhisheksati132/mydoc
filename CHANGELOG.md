@@ -3,6 +3,17 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [2.0.15] — 2026-11-17
+
+### Fixed
+- **Copy, move, and replace hold up on real storage** — directory walks no longer follow symlinks, copied trees and links are verified before the source is deleted, a failed replace restores the original, and a partial multi-item result reports the bytes that actually moved.
+- **Saved copies stop re-indexing themselves** — the trim timestamp moved to a sidecar, so cache bookkeeping no longer makes an unchanged document look edited; the oldest copy is still evicted first.
+- **Read-aloud honours pause exactly** — a pause that lands mid-chunk is respected, late events from a superseded utterance cannot fail the sentence being spoken, and resume re-speaks the paused chunk.
+- **PDF tools** — XML sanitising keeps emoji and rare CJK characters, metadata stripping no longer removes the tagged reading order and alternate text, the raster compression fallback caps render size and always releases native page buffers, and generated PDFs close cleanly when a write fails.
+- **Office previews** — nested PowerPoint group shapes apply their own transform instead of overwriting the parent's, and a clipped repeated spreadsheet range marks the sheet partial rather than silently showing fewer cells.
+- **OCR save uses the system file picker**, so saving recognised text works under scoped storage on Android 11+.
+- **Search and widget polish** — stale content hits no longer flash during the debounce or overwrite newer results, `.doc` previews cap their read allocation, index failures are logged, viewer bookmarks follow the document across swipes, and Continue-reading rows deep-link by document URI and repaint page progress.
+
 ## [2.0.14] — 2026-11-16
 
 ### Previews that show the page, settings that do something

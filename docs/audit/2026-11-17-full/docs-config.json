@@ -1,0 +1,192 @@
+[
+  {
+    "path": ".gitattributes",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": ".github/ISSUE_TEMPLATE/bug_report.yml",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": ".github/ISSUE_TEMPLATE/config.yml",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": ".github/ISSUE_TEMPLATE/feature_request.yml",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": ".gitignore",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "app/schemas/com.abhisheksati.mydoc.data.local.AppDatabase/3.json",
+    "coverage": "full",
+    "notes": "Complete JSON parsed; schema tables, columns, primary keys and indexes compared with current Room migrations."
+  },
+  {
+    "path": "app/schemas/com.abhisheksati.mydoc.data.local.AppDatabase/4.json",
+    "coverage": "full",
+    "notes": "Complete JSON parsed; schema tables, columns, primary keys and indexes compared with current Room migrations."
+  },
+  {
+    "path": "app/schemas/com.abhisheksati.mydoc.data.local.AppDatabase/5.json",
+    "coverage": "full",
+    "notes": "Complete JSON parsed; schema tables, columns, primary keys and indexes compared with current Room migrations."
+  },
+  {
+    "path": "app/schemas/com.abhisheksati.mydoc.data.local.AppDatabase/6.json",
+    "coverage": "full",
+    "notes": "Complete JSON parsed; schema tables, columns, primary keys and indexes compared with current Room migrations."
+  },
+  {
+    "path": "app/schemas/com.abhisheksati.mydoc.data.local.AppDatabase/7.json",
+    "coverage": "full",
+    "notes": "Complete JSON parsed; schema tables, columns, primary keys and indexes compared with current Room migrations."
+  },
+  {
+    "path": "app/schemas/com.abhisheksati.mydoc.data.local.AppDatabase/8.json",
+    "coverage": "full",
+    "notes": "Complete JSON parsed; schema tables, columns, primary keys and indexes compared with current Room migrations."
+  },
+  {
+    "path": "CHANGELOG.md",
+    "coverage": "partial",
+    "notes": "Read portions or summary only; not claiming full review."
+  },
+  {
+    "path": "docs/ARCHITECTURE.md",
+    "coverage": "full",
+    "notes": "Entire file read in bounded excerpts."
+  },
+  {
+    "path": "docs/audit/2026-11-04-external-audit-verification.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "docs/audit/AUDIT_REPORT.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "docs/audit/DEAD_CODE.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "docs/audit/DEPENDENCIES.md",
+    "coverage": "full",
+    "notes": "Entire file read in bounded excerpts."
+  },
+  {
+    "path": "docs/audit/FILES_REVIEWED.md",
+    "coverage": "full",
+    "notes": "Entire file read in bounded excerpts."
+  },
+  {
+    "path": "docs/audit/FIX_PLAN.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "docs/audit/PERMISSIONS_AND_NETWORK.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "docs/audit/README.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "docs/brand-identity.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "docs/DISCOVERY.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "docs/DOCUMENT_FIDELITY.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "docs/EXPLORER_FEATURES.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "docs/EXPLORER_PREFERENCES.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "docs/EXPLORER_TOOLS.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "docs/FEATURE_ROADMAP.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "docs/FOLDER_COMPARISON.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "docs/LIQUID_GLASS.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "docs/QUICK_PREVIEW.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "docs/UI_POLISH.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "docs/UX_REFINEMENT.md",
+    "coverage": "full",
+    "notes": "Entire file read in bounded excerpts."
+  },
+  {
+    "path": "docs/WORD_ENGINE.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "docs/ZIP_SELECTION.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "LICENSE",
+    "coverage": "third_party_inventory",
+    "notes": "Large bundled third-party license text; inventoried, not semantically reviewed."
+  },
+  {
+    "path": "SECURITY.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  },
+  {
+    "path": "THIRD_PARTY_NOTICES.md",
+    "coverage": "full",
+    "notes": "Entire file read."
+  }
+]

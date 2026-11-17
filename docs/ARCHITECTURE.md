@@ -1,4 +1,4 @@
-# MyDoc System Architecture & Design Specification (v2.0.12)
+# MyDoc System Architecture & Design Specification (v2.0.14)
 
 ---
 
@@ -89,7 +89,7 @@ Core UI and engine files have been modularized into domain-focused components:
 - `SettingsAboutSection.kt`: In-app updates checker, open-source licenses, and legal notices.
 
 ### 4. Playback, Discovery & Surfaces
-- `tools/tts/TtsPlaybackService.kt`: Foreground `mediaPlayback` service owning the platform `MediaSession` and a `MediaStyle` notification, so reading outlives the viewer and answers media keys. The session exposes a private public-version notification for the lock screen.
+- `tools/tts/TtsPlaybackService.kt`: Foreground `mediaPlayback` service owning the platform `MediaSession` and a `MediaStyle` notification, so reading stays audible with the screen off or the app backgrounded while the viewer is open. Narration is viewer-scoped: closing the document stops it because the page loader borrows the viewer's renderer. The session exposes a private public-version notification for the lock screen.
 - `discovery/DiscoveryStore.kt`: Opt-in FTS4 index (`discovery.db`) of document text, queried with `snippet()` for the search sheet's "Inside documents" results; the index holds extracted text only, never file contents, and is rebuildable from disk.
 - `widget/ContinueReadingWidget.kt`: `RemoteViews` `AppWidgetProvider` listing the three most recent documents; rows deep-link through `MainActivity` and re-render on open/close.
 - `LauncherShortcuts.kt`: Dynamic `ShortcutManagerCompat` shortcuts (Scan, Search, Merge PDFs) routed through `MainActivity` intent actions.

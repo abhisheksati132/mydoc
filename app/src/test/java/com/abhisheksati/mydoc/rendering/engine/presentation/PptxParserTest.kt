@@ -33,6 +33,110 @@ class PptxParserTest {
     }
 
     @Test
+    fun `nested groups apply the inner transform inside the outer one`() = runBlocking {
+        val baos = ByteArrayOutputStream()
+        val zos = ZipOutputStream(baos)
+        zos.putNextEntry(ZipEntry("ppt/presentation.xml"))
+        zos.write(
+            """
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                <p:sldSz cx="9144000" cy="5143500"/>
+                <p:sldIdLst>
+                    <p:sldId id="256" r:id="rId1"/>
+                </p:sldIdLst>
+            </p:presentation>
+            """.trimIndent().toByteArray()
+        )
+        zos.closeEntry()
+        zos.putNextEntry(ZipEntry("ppt/_rels/presentation.xml.rels"))
+        zos.write(
+            """
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+            </Relationships>
+            """.trimIndent().toByteArray()
+        )
+        zos.closeEntry()
+        zos.putNextEntry(ZipEntry("ppt/slides/slide1.xml"))
+        zos.write(
+            """
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                <p:cSld>
+                    <p:spTree>
+                        <p:grpSp>
+                            <p:grpSpPr>
+                                <a:xfrm>
+                                    <a:off x="1000000" y="500000"/>
+                                    <a:ext cx="4000000" cy="2000000"/>
+                                    <a:chOff x="0" y="0"/>
+                                    <a:chExt cx="4000000" cy="2000000"/>
+                                </a:xfrm>
+                            </p:grpSpPr>
+                            <p:grpSp>
+                                <p:grpSpPr>
+                                    <a:xfrm>
+                                        <a:off x="500000" y="300000"/>
+                                        <a:ext cx="1000000" cy="1000000"/>
+                                        <a:chOff x="0" y="0"/>
+                                        <a:chExt cx="1000000" cy="1000000"/>
+                                    </a:xfrm>
+                                </p:grpSpPr>
+                                <p:sp>
+                                    <p:spPr>
+                                        <a:xfrm>
+                                            <a:off x="100000" y="100000"/>
+                                            <a:ext cx="400000" cy="400000"/>
+                                        </a:xfrm>
+                                    </p:spPr>
+                                    <p:txBody>
+                                        <a:p><a:r><a:t>Nested Shape</a:t></a:r></a:p>
+                                    </p:txBody>
+                                </p:sp>
+                            </p:grpSp>
+                        </p:grpSp>
+                    </p:spTree>
+                </p:cSld>
+            </p:sld>
+            """.trimIndent().toByteArray()
+        )
+        zos.closeEntry()
+        zos.finish()
+
+        val pres = parser.parse(ByteArrayInputStream(baos.toByteArray()))
+        val shape = pres.slides.single().visualElements.first { element ->
+            element.paragraphs.any { it.plainText.contains("Nested Shape") }
+        }
+        // Inner offset (0.5, 0.3 in the outer group's child space) then the outer offset
+        // (1.0, 0.5): x = 1_000_000 + 500_000 + 100_000 = 1_600_000 and
+        // y = 500_000 + 300_000 + 100_000 = 900_000 of the 9_144_000 x 5_143_500 slide,
+        // both ~0.175. The inner xfrm used to overwrite the outer one, leaving 0.066/0.078.
+        assertEquals(0.175f, shape.bounds.left, 0.02f)
+        assertEquals(0.175f, shape.bounds.top, 0.02f)
+    }
+
+    @Test
+    fun `cached-file route reports the package cap instead of a complete deck`() {
+        val bytes = createSyntheticPptxZip(fillerEntries = 2_600)
+        val file = java.io.File.createTempFile("capped-deck", ".pptx")
+        try {
+            file.writeBytes(bytes)
+            val pres = runBlocking { parser.parse(file) }
+            assertEquals(1, pres.slides.size)
+            assertNotNull(
+                "a deck cut short by the entry cap must not look complete",
+                pres.incompleteReason
+            )
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
     fun `parse empty stream reports emptiness instead of inventing a slide`() = runBlocking {
         val pres = parser.parse(ByteArrayInputStream(ByteArray(0)))
         // This used to return one fabricated slide titled "Empty Presentation" carrying a
@@ -93,7 +197,7 @@ class PptxParserTest {
         assertTrue(pres.slides.none { it.visualElements.isNotEmpty() })
     }
 
-    private fun createSyntheticPptxZip(): ByteArray {
+    private fun createSyntheticPptxZip(fillerEntries: Int = 0): ByteArray {
         val baos = ByteArrayOutputStream()
         val zos = ZipOutputStream(baos)
 
@@ -200,6 +304,13 @@ class PptxParserTest {
             """.trimIndent().toByteArray()
         )
         zos.closeEntry()
+
+        // Entries the parser does not need; they exist to cross its package-entry budget.
+        for (i in 1..fillerEntries) {
+            zos.putNextEntry(ZipEntry("ppt/filler/note$i.xml"))
+            zos.write("<note/>".toByteArray())
+            zos.closeEntry()
+        }
 
         zos.finish()
         return baos.toByteArray()

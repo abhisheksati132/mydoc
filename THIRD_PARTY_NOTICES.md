@@ -2,7 +2,7 @@
 
 MyDoc bundles or links the components below. Each entry states what is actually packaged in the
 released APK, not what was once considered: the dependency set is the one Gradle resolves for
-`app:dependencies --configuration releaseRuntimeClasspath` (AGP 9.5.0, Kotlin 2.3.21), and the native
+`app:dependencies --configuration releaseRuntimeClasspath` (AGP 9.5.1, Kotlin 2.4.21), and the native
 and asset payload was read out of a built APK.
 
 Licence texts that a licence requires to travel with the work do travel with it: the AGPL-3.0 covering

@@ -262,7 +262,7 @@ class DocumentRepositoryImpl(
                         if (tmpFile.exists()) tmpFile.delete()
                     }
                 }
-                localFile.setLastModified(System.currentTimeMillis())
+                com.abhisheksati.mydoc.data.local.DocumentStreamResolver.touchSavedCopy(localFile)
                 com.abhisheksati.mydoc.data.local.DocumentStreamResolver.trimSavedDocsCache(savedDocsDir)
             } catch (e: java.io.IOException) {
                 SecureLog.warn("DocumentRepository", "Failed caching local document copy", e)
@@ -401,6 +401,9 @@ class DocumentRepositoryImpl(
             pageCount = pageCount,
             timestamp = System.currentTimeMillis()
         )
+        // The widget shows page progress; without this repaint it stays at the page seen when the
+        // document was opened until the activity is recreated.
+        com.abhisheksati.mydoc.widget.ContinueReadingWidget.refresh(context)
     }
 
     override suspend fun getViewState(uri: String): ViewState? = withContext(Dispatchers.IO) {

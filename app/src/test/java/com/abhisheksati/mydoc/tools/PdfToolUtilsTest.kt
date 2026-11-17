@@ -80,6 +80,28 @@ class PdfToolUtilsTest {
     }
 
     @Test
+    fun sanitizeXml_keepsSupplementaryCodePoints() {
+        // U+1F600 (emoji) and U+20000 (supplementary CJK) are surrogate pairs. Filtering UTF-16
+        // chars dropped both halves, so DOCX output silently lost every non-BMP character.
+        val input = "A\uD83D\uDE00B\uD840\uDC00C"
+        assertEquals(input, PdfToolUtils.sanitizeXml(input))
+    }
+
+    @Test
+    fun sanitizeXml_dropsIsolatedSurrogatesOnly() {
+        // A lone high surrogate is not a legal XML character, but it must not take the rest of
+        // the text with it.
+        val input = "A\uD83DB\uDC00C"
+        assertEquals("ABC", PdfToolUtils.sanitizeXml(input))
+    }
+
+    @Test
+    fun sanitizeXml_keepsBoundaryCodePoints() {
+        // U+FFFD is the last legal BMP value; U+FFFE is not.
+        assertEquals("ok\uFFFD", PdfToolUtils.sanitizeXml("ok\uFFFD\uFFFE"))
+    }
+
+    @Test
     fun createTempOutputFile_createsExpectedDirectoryAndFile() {
         val tempDir = java.io.File.createTempFile("cache_test", "dir").apply {
             delete()

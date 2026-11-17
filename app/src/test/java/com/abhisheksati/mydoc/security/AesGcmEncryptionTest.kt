@@ -1,34 +1,31 @@
 package com.abhisheksati.mydoc.security
 
+import com.abhisheksati.mydoc.tools.security.SignatureStorage
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.File
 import java.security.SecureRandom
 import javax.crypto.AEADBadTagException
-import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
-import javax.crypto.spec.GCMParameterSpec
 
 /**
- * Unit tests verifying hardware-grade AES-256-GCM authenticated encryption invariants,
- * corrupted tag rejection, IV uniqueness, and secure data shredding.
+ * Verifies the AES-256-GCM archive invariants of the production signature store:
+ * [SignatureStorage.sealWithKey] and [SignatureStorage.openWithKey] are the exact helpers
+ * `saveSignature`/`decode` run against the Android Keystore key, exercised here with a
+ * JCA-generated key because the Keystore itself only exists on a device.
  */
 class AesGcmEncryptionTest {
 
     private lateinit var secretKey: SecretKey
     private val random = SecureRandom()
 
-    private val transformation = "AES/GCM/NoPadding"
     private val ivLength = 12
-    private val tagLengthBits = 128
+    private val gcmTagLength = 16
 
     @Before
     fun setUp() {
@@ -38,84 +35,73 @@ class AesGcmEncryptionTest {
     }
 
     @Test
-    fun aes256Gcm_encryptAndDecrypt_restoresOriginalContent() {
-        val originalText = "TopSecretDocument-12345"
-        val plainBytes = originalText.toByteArray(Charsets.UTF_8)
+    fun sealWithKey_openWithKey_restoresOriginalContent() {
+        val plainBytes = "TopSecretDocument-12345".toByteArray(Charsets.UTF_8)
 
-        val iv = ByteArray(ivLength).also { random.nextBytes(it) }
-        val cipher = Cipher.getInstance(transformation)
-        val spec = GCMParameterSpec(tagLengthBits, iv)
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey, spec)
+        val archive = SignatureStorage.sealWithKey(secretKey, plainBytes)
 
-        val cipherBytes = cipher.doFinal(plainBytes)
-        assertFalse(cipherBytes.contentEquals(plainBytes))
-
-        // Decrypt
-        val decryptCipher = Cipher.getInstance(transformation)
-        decryptCipher.init(Cipher.DECRYPT_MODE, secretKey, spec)
-        val decryptedBytes = decryptCipher.doFinal(cipherBytes)
-
-        assertEquals(originalText, String(decryptedBytes, Charsets.UTF_8))
-    }
-
-    @Test(expected = AEADBadTagException::class)
-    fun aes256Gcm_corruptedCiphertext_throwsAuthenticationException() {
-        val plainBytes = "SensitiveFinancialStatement".toByteArray(Charsets.UTF_8)
-        val iv = ByteArray(ivLength).also { random.nextBytes(it) }
-
-        val cipher = Cipher.getInstance(transformation)
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey, GCMParameterSpec(tagLengthBits, iv))
-        val cipherBytes = cipher.doFinal(plainBytes)
-
-        // Tamper with one bit of the ciphertext/tag
-        cipherBytes[0] = (cipherBytes[0].toInt() xor 0x01).toByte()
-
-        val decryptCipher = Cipher.getInstance(transformation)
-        decryptCipher.init(Cipher.DECRYPT_MODE, secretKey, GCMParameterSpec(tagLengthBits, iv))
-        decryptCipher.doFinal(cipherBytes) // Must throw AEADBadTagException
-    }
-
-    @Test(expected = AEADBadTagException::class)
-    fun aes256Gcm_wrongKey_rejectsDecryption() {
-        val plainBytes = "ConfidentialNotes".toByteArray(Charsets.UTF_8)
-        val iv = ByteArray(ivLength).also { random.nextBytes(it) }
-
-        val cipher = Cipher.getInstance(transformation)
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey, GCMParameterSpec(tagLengthBits, iv))
-        val cipherBytes = cipher.doFinal(plainBytes)
-
-        // Generate different key
-        val differentKey = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
-
-        val decryptCipher = Cipher.getInstance(transformation)
-        decryptCipher.init(Cipher.DECRYPT_MODE, differentKey, GCMParameterSpec(tagLengthBits, iv))
-        decryptCipher.doFinal(cipherBytes) // Must throw AEADBadTagException
+        assertFalse(archive.contentEquals(plainBytes))
+        assertEquals(plainBytes.size + ivLength + gcmTagLength, archive.size)
+        assertArrayEquals(plainBytes, SignatureStorage.openWithKey(secretKey, archive))
     }
 
     @Test
-    fun secureZeroFillShredder_overwritesAllBytesBeforeDeletion() {
-        val tempFile = File.createTempFile("shred_test", ".tmp")
-        try {
-            tempFile.writeText("Sensitive customer SSN and passwords")
-            assertTrue(tempFile.exists())
-            val originalLength = tempFile.length()
-            assertTrue(originalLength > 0)
+    fun sealWithKey_usesAFreshIvForEveryArchive() {
+        val plainBytes = "SameContent".toByteArray(Charsets.UTF_8)
 
-            // Multi-pass secure shredding simulation
-            tempFile.outputStream().use { fos ->
-                val zeros = ByteArray(originalLength.toInt())
-                fos.write(zeros)
-                fos.flush()
-            }
+        val first = SignatureStorage.sealWithKey(secretKey, plainBytes)
+        val second = SignatureStorage.sealWithKey(secretKey, plainBytes)
 
-            val shreddedBytes = tempFile.readBytes()
-            assertTrue(shreddedBytes.all { it == 0.toByte() })
+        assertFalse(
+            "Two seals of the same plaintext must not reuse an IV",
+            first.copyOfRange(0, ivLength).contentEquals(second.copyOfRange(0, ivLength))
+        )
+        assertNotEquals(first.toList(), second.toList())
+        assertArrayEquals(plainBytes, SignatureStorage.openWithKey(secretKey, first))
+        assertArrayEquals(plainBytes, SignatureStorage.openWithKey(secretKey, second))
+    }
 
-            val deleted = tempFile.delete()
-            assertTrue(deleted)
-            assertFalse(tempFile.exists())
-        } finally {
-            if (tempFile.exists()) tempFile.delete()
+    @Test
+    fun corruptedCiphertext_throwsAuthenticationException() {
+        val plainBytes = "SensitiveFinancialStatement".toByteArray(Charsets.UTF_8)
+        val archive = SignatureStorage.sealWithKey(secretKey, plainBytes)
+
+        archive[ivLength] = (archive[ivLength].toInt() xor 0x01).toByte()
+
+        assertThrows(AEADBadTagException::class.java) {
+            SignatureStorage.openWithKey(secretKey, archive)
+        }
+    }
+
+    @Test
+    fun corruptedTag_throwsAuthenticationException() {
+        val plainBytes = "TamperTheTag".toByteArray(Charsets.UTF_8)
+        val archive = SignatureStorage.sealWithKey(secretKey, plainBytes)
+
+        archive[archive.lastIndex] = (archive[archive.lastIndex].toInt() xor 0x01).toByte()
+
+        assertThrows(AEADBadTagException::class.java) {
+            SignatureStorage.openWithKey(secretKey, archive)
+        }
+    }
+
+    @Test
+    fun wrongKey_rejectsDecryption() {
+        val plainBytes = "ConfidentialNotes".toByteArray(Charsets.UTF_8)
+        val archive = SignatureStorage.sealWithKey(secretKey, plainBytes)
+        val differentKey = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
+
+        assertThrows(AEADBadTagException::class.java) {
+            SignatureStorage.openWithKey(differentKey, archive)
+        }
+    }
+
+    @Test
+    fun archiveWithoutIvOrCiphertext_isRejected() {
+        val tooShort = ByteArray(ivLength).also { random.nextBytes(it) }
+
+        assertThrows(IllegalArgumentException::class.java) {
+            SignatureStorage.openWithKey(secretKey, tooShort)
         }
     }
 }

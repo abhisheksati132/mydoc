@@ -102,7 +102,7 @@ object DocumentStreamResolver {
                         if (tmpBackup.exists()) tmpBackup.delete()
                     }
                 } else {
-                    backupFile.setLastModified(System.currentTimeMillis())
+                    touchSavedCopy(backupFile)
                 }
                 trimSavedDocsCache(savedDocsDir)
             } catch (_: Exception) {}
@@ -198,7 +198,7 @@ object DocumentStreamResolver {
                     DocumentIdentity.isSavedCopyOf(it, uriString)
                 }
                 if (byKey != null) {
-                    byKey.setLastModified(System.currentTimeMillis())
+                    touchSavedCopy(byKey)
                     return StreamResult(FileInputStream(byKey), null, "saved_docs_key")
                 }
             }
@@ -334,6 +334,22 @@ object DocumentStreamResolver {
     const val MAX_SAVED_DOCS_COUNT = 50
     const val MAX_SAVED_DOCS_BYTES = 100L * 1024 * 1024 // 100 MB
 
+    /**
+     * Mark [copy] as just used for cache trimming. The stamp lives on the meta sidecar: the copy's
+     * own modification time is its content identity, and moving it on every read made the text
+     * indexer treat an unchanged document as edited and re-extract it on every open.
+     */
+    fun touchSavedCopy(copy: File) {
+        val meta = java.io.File(copy.parentFile, OfflineCopyPolicy.metaFileFor(copy.name))
+        if (meta.exists()) meta.setLastModified(System.currentTimeMillis())
+        else copy.setLastModified(System.currentTimeMillis())
+    }
+
+    private fun savedCopyLastUsed(copy: File): Long {
+        val meta = java.io.File(copy.parentFile, OfflineCopyPolicy.metaFileFor(copy.name))
+        return if (meta.exists()) meta.lastModified() else copy.lastModified()
+    }
+
     fun trimSavedDocsCache(savedDocsDir: File) {
         // The sidecars are bookkeeping, not cached documents: they must not occupy a slot in the
         // count or the byte budget, and they go away with the copy they describe.
@@ -343,7 +359,7 @@ object DocumentStreamResolver {
         var count = files.size
         if (count <= MAX_SAVED_DOCS_COUNT && totalBytes <= MAX_SAVED_DOCS_BYTES) return
 
-        val sorted = files.sortedBy { it.lastModified() }
+        val sorted = files.sortedBy { savedCopyLastUsed(it) }
         for (f in sorted) {
             if (count > MAX_SAVED_DOCS_COUNT || totalBytes > MAX_SAVED_DOCS_BYTES) {
                 val len = f.length()

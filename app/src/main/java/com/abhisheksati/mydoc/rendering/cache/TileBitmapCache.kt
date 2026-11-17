@@ -12,8 +12,7 @@ class TileBitmapCache(
 ) {
 
     private val lock = Any()
-    private var currentBytes = 0
-    private val cache = LinkedHashMap<String, Bitmap>(16, 0.75f, true)
+    private val cache = ByteBoundedLru<Bitmap> { runCatching { it.byteCount }.getOrDefault(0) }
 
     init {
         register(this)
@@ -51,7 +50,6 @@ class TileBitmapCache(
         } else {
             if (bmp != null) {
                 cache.remove(key)
-                currentBytes -= runCatching { bmp.byteCount }.getOrDefault(0)
             }
             null
         }
@@ -59,28 +57,13 @@ class TileBitmapCache(
 
     fun put(pageIndex: Int, scale: Float, mode: ReadingMode, bitmap: Bitmap) = synchronized(lock) {
         if (runCatching { !bitmap.isRecycled }.getOrDefault(true)) {
-            val key = cacheKey(pageIndex, scale, mode)
-            val old = cache.put(key, bitmap)
-            currentBytes += runCatching { bitmap.byteCount }.getOrDefault(0)
-            if (old != null) {
-                currentBytes -= runCatching { old.byteCount }.getOrDefault(0)
-            }
-            trimToSize(maxMemoryBytes)
-        }
-    }
-
-    private fun trimToSize(maxBytes: Int) {
-        val iterator = cache.entries.iterator()
-        while (iterator.hasNext() && currentBytes > maxBytes) {
-            val entry = iterator.next()
-            iterator.remove()
-            currentBytes -= runCatching { entry.value.byteCount }.getOrDefault(0)
+            cache.put(cacheKey(pageIndex, scale, mode), bitmap)
+            cache.trimTo(maxMemoryBytes)
         }
     }
 
     fun clear() = synchronized(lock) {
         cache.clear()
-        currentBytes = 0
     }
 
     fun onTrimMemory(level: Int) = synchronized(lock) {
@@ -91,14 +74,13 @@ class TileBitmapCache(
             }
             level >= android.content.ComponentCallbacks2.TRIM_MEMORY_MODERATE ||
                 level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> {
-                trimToSize(maxMemoryBytes / 2)
+                cache.trimTo(maxMemoryBytes / 2)
             }
         }
     }
 
     fun recycleAll() = synchronized(lock) {
         cache.clear()
-        currentBytes = 0
     }
 
     private fun cacheKey(pageIndex: Int, scale: Float, mode: ReadingMode): String {

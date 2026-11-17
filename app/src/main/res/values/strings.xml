@@ -1090,7 +1090,7 @@
     <string name="scan_camera_start_failed">The camera could not be started. Check that MyDoc has camera permission.</string>
     <string name="scan_photo_capture_failed">The photo could not be captured.</string>
     <string name="scan_filter_failed">Filter could not be applied. Original scans retained.</string>
-    <string name="ocr_saved_to_documents">Saved to Documents/%1$s</string>
+    <string name="ocr_saved_file">Saved %1$s</string>
     <string name="cleaner_review_all_duplicate_groups">Review all duplicate groups</string>
     <string name="cleaner_duplicate_groups_reviewed">%1$d groups reviewed. Choose the copies to keep before cleanup.</string>
     <string name="discovery_title">Contents &amp; collections</string>
@@ -1111,17 +1111,13 @@
     <string name="tts_open_settings">Text-to-speech settings</string>
     <string name="discovery_initial_message">Choose files or a folder to build your private, offline index. Indexing stops when you leave this screen.</string>
     <string name="discovery_reindexing_folders">Refreshing your saved folders…</string>
-    <string name="discovery_search_failed">Could not search the local index: %1$s</string>
-    <string name="discovery_save_failed">Could not save this change: %1$s</string>
     <string name="discovery_indexing_stopped">Indexing stopped. Completed files are saved.</string>
     <string name="discovery_index_failed">Could not index this selection: %1$s</string>
     <string name="discovery_relink_unreadable">The new location could not be read; the previous reference was kept.</string>
     <string name="discovery_relink_done">File reconnected. Tags were preserved.</string>
     <string name="discovery_relink_failed">Could not reconnect this file</string>
-    <string name="discovery_refresh_failed">Refresh failed: %1$s</string>
     <string name="discovery_snapshot_line">%1$s • snapshot %2$s</string>
     <string name="discovery_file_missing">File missing or permission expired. Add its new location to reconnect it.</string>
-    <string name="discovery_open_failed">Cannot open this file</string>
     <!-- Viewer disclosure, accessibility and tool-sheet labels -->
     <string name="sign_ink_black">Black ink</string>
     <string name="sign_ink_navy">Navy ink</string>

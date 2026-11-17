@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -86,12 +87,14 @@ fun SpotlightSearchSheet(
     var contentHits by remember { mutableStateOf(emptyList<com.abhisheksati.mydoc.discovery.DiscoveredFile>()) }
     val normalizedQuery = query.trim()
     LaunchedEffect(normalizedQuery, selectedFilter, discoveryStore) {
+        // Hits from the previous query must not stand in for the new one while the debounce
+        // runs; the list showed the old query's content hits for those 350 ms.
+        contentHits = emptyList()
         if (discoveryStore == null || normalizedQuery.length < 2 || selectedFilter == "Media") {
-            contentHits = emptyList()
             return@LaunchedEffect
         }
         kotlinx.coroutines.delay(350)
-        contentHits = runCatching { discoveryStore.search(normalizedQuery, "", "") }
+        val hits = runCatching { discoveryStore.search(normalizedQuery, "", "") }
             .getOrDefault(emptyList())
             .filter { it.snippet.isNotBlank() }
             .filter { hit ->
@@ -99,6 +102,10 @@ fun SpotlightSearchSheet(
                     DocumentFilter.fromLabel(selectedFilter)?.matches(hit.name.substringAfterLast('.', "")) == true
             }
             .take(40)
+        // A slower search that finishes after the query changed must not overwrite the newer
+        // results; the effect is cancelled, but assignment below is not a suspension point.
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()  // imported extension
+        contentHits = hits
     }
 
     val filteredItems = remember(items, query, selectedFilter) {

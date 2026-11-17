@@ -741,6 +741,7 @@ fun StorageCleanerScreen(
                     coroutineScope.launch {
                         isCleaning = true
                         var partialCleanedCount = 0
+                        var partialCleanedBytes = 0L
                         val moved: List<com.abhisheksati.mydoc.domain.model.TrashItem> =
                             if (selectedFiles.isEmpty()) {
                                 emptyList()
@@ -753,6 +754,7 @@ fun StorageCleanerScreen(
                                 onFailure = { error ->
                                     if (error is com.abhisheksati.mydoc.domain.model.PartialStorageOperationException) {
                                         partialCleanedCount = error.completed
+                                        partialCleanedBytes = error.completedBytes
                                     }
                                     app.showMessage(
                                         UserMessages.actionFailed(R.string.dialog_move_to_bin, error, "Cleaner")
@@ -765,7 +767,15 @@ fun StorageCleanerScreen(
                         val deletedDirs = cleanerManager.deleteEmptyDirectories(selectedEmptyDirs, rootDir)
                         val actualMovedCount = if (moved.isNotEmpty()) moved.size else partialCleanedCount
                         cleanedCount = actualMovedCount
-                        cleanedBytes = if (moved.isNotEmpty()) moved.sumOf { it.sizeBytes } else 0L
+                        // A zero-byte success screen claimed the cleanup worked even when every
+                        // move failed. The completion state only appears if something moved or
+                        // an empty folder went away; a total failure stays on the results list
+                        // with the failure message.
+                        cleanedBytes = when {
+                            moved.isNotEmpty() -> moved.sumOf { it.sizeBytes }
+                            actualMovedCount > 0 || deletedDirs > 0 -> partialCleanedBytes
+                            else -> null
+                        }
 
                         val failedFiles = selectedFiles.size - actualMovedCount
                         val failedDirs = selectedEmptyDirs.size - deletedDirs

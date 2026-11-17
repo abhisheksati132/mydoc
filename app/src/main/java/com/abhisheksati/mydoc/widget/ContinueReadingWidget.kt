@@ -17,8 +17,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-/** Home-screen "continue reading" widget. Rows carry a recents index, never a file path:
- *  the activity resolves the index against its own database. */
+/** Home-screen "continue reading" widget. Rows carry the document URI, which the activity only
+ *  opens while it is still in the recents table; a row never names an arbitrary file. */
 class ContinueReadingWidget : AppWidgetProvider() {
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
@@ -58,7 +58,7 @@ class ContinueReadingWidget : AppWidgetProvider() {
                         context.getString(R.string.widget_open_document)
                     }
                 )
-                setOnClickPendingIntent(rowId, rowIntent(context, index))
+                setOnClickPendingIntent(rowId, rowIntent(context, index, doc.uri))
             }
         }
     }
@@ -75,13 +75,13 @@ class ContinueReadingWidget : AppWidgetProvider() {
         )
     }
 
-    private fun rowIntent(context: Context, index: Int): PendingIntent {
+    private fun rowIntent(context: Context, row: Int, documentUri: String): PendingIntent {
         val intent = Intent(context, MainActivity::class.java)
             .setAction(MainActivity.ACTION_OPEN_RECENT)
-            .putExtra(MainActivity.EXTRA_RECENT_INDEX, index)
+            .putExtra(MainActivity.EXTRA_RECENT_URI, documentUri)
         return PendingIntent.getActivity(
             context,
-            100 + index,
+            100 + row,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )

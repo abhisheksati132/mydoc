@@ -1,0 +1,166 @@
+[
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/rendering/engine/NativeOfficeFidelityOnDeviceTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/rendering/engine/OfficeConversionBudgetOnDeviceTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/rendering/engine/OptionalOfficeEngineOnDeviceTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/rendering/engine/PdfSearchCancellationOnDeviceTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/rendering/engine/PdfTileRenderingOnDeviceTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/rendering/engine/WordSemanticsOnDeviceTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/rendering/engine/word/NativeWordEngineProbeTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/rendering/engine/word/WordFidelityOnDeviceTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/rendering/engine/word/WordViewerSessionOnDeviceTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/ui/viewer/DocumentProblemScreenScrollTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/ui/viewer/controls/AdaptiveInkOnDeviceTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/ui/viewer/controls/FastScrollbarAccessibilityTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/ui/viewer/controls/ViewerContentsButtonOnDeviceTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/androidTest/java/com/abhisheksati/mydoc/ui/viewer/word/WordViewerOnDeviceTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/rendering/engine/BuiltInProtectedOfficeTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/rendering/engine/NativeOfficeFormatsTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/rendering/engine/OfficeSourceReaderTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/rendering/engine/OutlineCacheTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/rendering/engine/ParserFuzzTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/rendering/engine/RendererSlotTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/rendering/engine/presentation/Ppt97RecordsTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/rendering/engine/presentation/PptxParserTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/rendering/engine/spreadsheet/Biff8ReaderTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/rendering/engine/spreadsheet/SpreadsheetFormatsTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/rendering/engine/spreadsheet/SpreadsheetParserTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/rendering/engine/spreadsheet/XlsxEngineTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/rendering/engine/spreadsheet/XlsxWorksheetFailureTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/rendering/engine/word/DocxImagesTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/rendering/engine/word/DocxLayoutTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/rendering/engine/word/DocxParserTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/rendering/engine/word/DocxSemanticsTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/rendering/engine/word/Word97TextTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/ui/viewer/FidelityDisclosureTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/ui/viewer/ViewerViewModelTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/ui/viewer/ZoomMathTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/ui/viewer/controls/AdaptiveInkTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/ui/viewer/controls/ViewerCapabilitiesTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/ui/viewer/text/TextViewerModelTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/ui/viewer/word/WordReflowProgressTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "app/src/test/java/com/abhisheksati/mydoc/ui/viewer/word/WordViewerModelTest.kt",
+    "coverage": "full"
+  },
+  {
+    "path": "office-engine/src/test/java/com/abhisheksati/mydoc/rendering/engine/word/WordPdfOptionsTest.kt",
+    "coverage": "full"
+  }
+]

@@ -2,9 +2,6 @@ package com.abhisheksati.mydoc.tools.tts
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.os.Bundle
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -17,16 +14,22 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Locale
 
 /**
  * Single, process-wide read-aloud engine. Screens reach it through [DocumentTtsManager];
  * [TtsPlaybackService] keeps it audible with the screen off and exposes media controls.
  *
  * Pages are read one after another so long documents behave like an audiobook: the viewer
- * follows [currentPage], and the notification survives leaving the activity.
+ * follows [currentPage]. Playback is viewer-scoped by design: the page loader borrows the
+ * viewer's renderer and OCR engine, so leaving the document stops narration. The foreground
+ * service keeps it audible with the screen off or the app in the background while it lasts.
  */
-class TtsPlaybackController private constructor(private val context: Context) : TextToSpeech.OnInitListener {
+class TtsPlaybackController internal constructor(
+    private val scope: CoroutineScope,
+    private val startSession: () -> Unit,
+    private val stopSession: () -> Unit,
+    engineFactory: (onReady: (Boolean) -> Unit, onEvent: (TtsEngineEvent, String?) -> Unit) -> TtsSpeechEngine
+) {
 
     private enum class Outcome { DONE, PAUSED, STOPPED, ERROR }
 
@@ -36,10 +39,6 @@ class TtsPlaybackController private constructor(private val context: Context) : 
         val pageCount: Int,
         val loader: (suspend (Int) -> String?)?
     )
-
-    private var tts: TextToSpeech? = TextToSpeech(context.applicationContext, this)
-    @Volatile private var initialized = false
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private val _playbackState = MutableStateFlow(TtsPlaybackState.INITIALIZING)
     val playbackState: StateFlow<TtsPlaybackState> = _playbackState.asStateFlow()
@@ -62,62 +61,49 @@ class TtsPlaybackController private constructor(private val context: Context) : 
     private var request: Request? = null
     private var readingJob: Job? = null
     private var pendingStart: (() -> Unit)? = null
-    private var currentUtteranceId: String? = null
+    @Volatile private var currentUtteranceId: String? = null
     private var awaiting: CompletableDeferred<Outcome>? = null
     private var activePage = 0
     private var activeChunk = 0
     private var pausedPage = 0
     private var pausedChunk = 0
+    @Volatile private var initialized = false
 
-    override fun onInit(status: Int) {
-        if (status != TextToSpeech.SUCCESS) {
-            _playbackState.value = TtsPlaybackState.ERROR
+    private val engine: TtsSpeechEngine = engineFactory(::handleEngineReady, ::handleEngineEvent)
+
+    private fun handleEngineReady(success: Boolean) {
+        scope.launch {
+            if (!success) {
+                _playbackState.value = TtsPlaybackState.ERROR
+                pendingStart = null
+                return@launch
+            }
+            _engineName.value = engine.label
+            initialized = true
+            _playbackState.value = TtsPlaybackState.IDLE
+            val start = pendingStart
             pendingStart = null
-            return
+            start?.invoke()
         }
-        val engine = tts
-        if (engine == null) {
-            _playbackState.value = TtsPlaybackState.ERROR
-            return
+    }
+
+    private fun handleEngineEvent(event: TtsEngineEvent, utteranceId: String?) {
+        if (utteranceId == null) return
+        // Engine callbacks arrive on a binder thread; apply them on the main scope and drop
+        // anything that no longer belongs to the utterance being awaited.
+        scope.launch {
+            if (utteranceId != currentUtteranceId) return@launch
+            when (event) {
+                // A pause can land between speak() and the engine reporting start.
+                TtsEngineEvent.START ->
+                    if (_playbackState.value != TtsPlaybackState.PAUSED) {
+                        _playbackState.value = TtsPlaybackState.PLAYING
+                    }
+                TtsEngineEvent.DONE -> complete(Outcome.DONE)
+                TtsEngineEvent.STOP -> complete(Outcome.PAUSED)
+                TtsEngineEvent.ERROR -> complete(Outcome.ERROR)
+            }
         }
-        _engineName.value = ttsEngineDisplayName(engine.defaultEngine) { pkg ->
-            val pm = context.packageManager
-            pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
-        }.orEmpty()
-        val result = engine.setLanguage(Locale.getDefault())
-        if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-            engine.language = Locale.US
-        }
-        engine.setSpeechRate(_speechRate.value)
-        engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String?) {
-                if (utteranceId == currentUtteranceId) {
-                    _playbackState.value = TtsPlaybackState.PLAYING
-                }
-            }
-
-            override fun onDone(utteranceId: String?) {
-                if (utteranceId == currentUtteranceId) complete(Outcome.DONE)
-            }
-
-            override fun onStop(utteranceId: String?, interrupted: Boolean) {
-                if (utteranceId == currentUtteranceId) complete(Outcome.PAUSED)
-            }
-
-            @Deprecated("Superseded by onError(String, Int); abstract in the base class.")
-            override fun onError(utteranceId: String?) {
-                complete(Outcome.ERROR)
-            }
-
-            override fun onError(utteranceId: String, errorCode: Int) {
-                complete(Outcome.ERROR)
-            }
-        })
-        initialized = true
-        _playbackState.value = TtsPlaybackState.IDLE
-        val start = pendingStart
-        pendingStart = null
-        start?.invoke()
     }
 
     private fun complete(outcome: Outcome) {
@@ -160,6 +146,9 @@ class TtsPlaybackController private constructor(private val context: Context) : 
         awaiting?.cancel()
         awaiting = null
         currentUtteranceId = null
+        // Leave PAUSED before the job runs: the loop's pause check must only observe a pause
+        // that lands after this point (including while the first page's text is loading).
+        _playbackState.value = TtsPlaybackState.PLAYING
         val job = scope.launch {
             try {
                 var page = startPage
@@ -203,7 +192,7 @@ class TtsPlaybackController private constructor(private val context: Context) : 
                             Outcome.STOPPED -> return@launch
                             Outcome.ERROR -> {
                                 _playbackState.value = TtsPlaybackState.ERROR
-                                TtsPlaybackService.stopSession(context)
+                                stopSession()
                                 return@launch
                             }
                         }
@@ -213,25 +202,23 @@ class TtsPlaybackController private constructor(private val context: Context) : 
                 }
                 _playbackState.value = TtsPlaybackState.IDLE
                 _currentUtterance.value = ""
-                TtsPlaybackService.stopSession(context)
+                stopSession()
             } catch (cancelled: CancellationException) {
                 throw cancelled
             }
         }
         readingJob = job
-        TtsPlaybackService.ensureStarted(context)
+        startSession()
     }
 
     private suspend fun speakAndAwait(chunk: String): Outcome {
         if (!initialized) return Outcome.ERROR
-        val engine = tts ?: return Outcome.ERROR
         val id = "tts_${System.nanoTime()}"
         currentUtteranceId = id
         val deferred = CompletableDeferred<Outcome>()
         awaiting = deferred
         _playbackState.value = TtsPlaybackState.PLAYING
-        val params = Bundle().apply { putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, id) }
-        if (engine.speak(chunk, TextToSpeech.QUEUE_FLUSH, params, id) != TextToSpeech.SUCCESS) {
+        if (!engine.speak(chunk, id)) {
             awaiting = null
             return Outcome.ERROR
         }
@@ -247,7 +234,7 @@ class TtsPlaybackController private constructor(private val context: Context) : 
             pausedPage = activePage
             pausedChunk = activeChunk
         }
-        tts?.stop()
+        engine.stop()
     }
 
     fun resume() {
@@ -265,16 +252,16 @@ class TtsPlaybackController private constructor(private val context: Context) : 
         complete(Outcome.STOPPED)
         awaiting = null
         currentUtteranceId = null
-        tts?.stop()
+        engine.stop()
         _playbackState.value = TtsPlaybackState.IDLE
         _currentUtterance.value = ""
         _currentPage.value = -1
-        if (wasReading) TtsPlaybackService.stopSession(context)
+        if (wasReading) stopSession()
     }
 
     fun setSpeed(rate: Float) {
         _speechRate.value = rate
-        tts?.setSpeechRate(rate)
+        engine.setSpeechRate(rate)
     }
 
     private fun chunkText(text: String): List<String> {
@@ -315,13 +302,23 @@ class TtsPlaybackController private constructor(private val context: Context) : 
     }
 
     companion object {
-        // Holds the application context only, so the singleton cannot outlive the process.
+        // Holds no context of its own: the engine and session lambdas capture the application
+        // context, so the singleton cannot outlive the process.
         @SuppressLint("StaticFieldLeak")
         @Volatile
         private var instance: TtsPlaybackController? = null
 
         fun get(context: Context): TtsPlaybackController = instance ?: synchronized(this) {
-            instance ?: TtsPlaybackController(context.applicationContext).also { instance = it }
+            instance ?: create(context.applicationContext).also { instance = it }
         }
+
+        private fun create(appContext: Context): TtsPlaybackController = TtsPlaybackController(
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
+            startSession = { TtsPlaybackService.ensureStarted(appContext) },
+            stopSession = { TtsPlaybackService.stopSession(appContext) },
+            engineFactory = { onReady, onEvent ->
+                AndroidTtsSpeechEngine(appContext, onReady, onEvent)
+            }
+        )
     }
 }

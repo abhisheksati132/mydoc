@@ -7,8 +7,9 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.os.Environment
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -24,8 +25,11 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -42,7 +46,7 @@ import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.DocumentCanvasColors
-import java.io.File
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -64,6 +68,29 @@ fun OcrResultSheet(
     val charCount = text.length
     val resources = LocalResources.current
     val clipLabel = stringResource(R.string.ocr_clip_label)
+
+    var pendingSaveName by remember { mutableStateOf("OCR_Text.txt") }
+    val saveTextLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch(Dispatchers.IO) {
+            try {
+                // Scoped storage: the destination is the user's choice, so this needs no storage
+                // permission. Writing public Documents directly failed on Android 11+.
+                context.contentResolver.openOutputStream(uri)?.use { out ->
+                    out.write(text.toByteArray(Charsets.UTF_8))
+                } ?: throw IOException("Could not open the selected file")
+                withContext(Dispatchers.Main) {
+                    context.showMessage(resources.getString(R.string.ocr_saved_file, pendingSaveName))
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    context.showMessage(UserMessages.actionFailed(R.string.action_save, e, "Ocr").resolve(context))
+                }
+            }
+        }
+    }
 
     AppModalSheet(
         onDismissRequest = onDismiss,
@@ -161,27 +188,10 @@ fun OcrResultSheet(
 
                 OutlinedButton(
                     onClick = {
-                        scope.launch(Dispatchers.IO) {
-                            try {
-                                val docsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-                                if (!docsDir.exists()) docsDir.mkdirs()
-                                val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-                                var candidate = File(docsDir, "OCR_Text_$timestamp.txt")
-                                var counter = 1
-                                while (candidate.exists()) {
-                                    candidate = File(docsDir, "OCR_Text_${timestamp}_$counter.txt")
-                                    counter++
-                                }
-                                candidate.writeText(text)
-                                withContext(Dispatchers.Main) {
-                                    context.showMessage(resources.getString(R.string.ocr_saved_to_documents, candidate.name))
-                                }
-                            } catch (e: Exception) {
-                                withContext(Dispatchers.Main) {
-                                    context.showMessage(UserMessages.actionFailed(R.string.action_save, e, "Ocr").resolve(context))
-                                }
-                            }
-                        }
+                        pendingSaveName = "OCR_Text_${
+                            SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+                        }.txt"
+                        saveTextLauncher.launch(pendingSaveName)
                     },
                     modifier = Modifier.weight(1f),
                     shape = AppRadius.pillShape,

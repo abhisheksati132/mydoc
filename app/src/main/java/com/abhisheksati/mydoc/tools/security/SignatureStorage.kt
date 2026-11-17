@@ -72,6 +72,28 @@ object SignatureStorage {
     }
 
     /**
+     * Seals [plainBytes] into the on-disk archive layout: 12-byte IV followed by the ciphertext.
+     * Kept free of Android APIs so the encryption invariants are testable on the JVM.
+     */
+    internal fun sealWithKey(key: SecretKey, plainBytes: ByteArray): ByteArray {
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(Cipher.ENCRYPT_MODE, key)
+        return cipher.iv + cipher.doFinal(plainBytes)
+    }
+
+    /** Opens an archive produced by [sealWithKey]; a wrong key or tampered bytes throw AEADBadTagException. */
+    internal fun openWithKey(key: SecretKey, archive: ByteArray): ByteArray {
+        require(archive.size > GCM_IV_LENGTH) { "Archive is too short to hold an IV and ciphertext" }
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(
+            Cipher.DECRYPT_MODE,
+            key,
+            GCMParameterSpec(GCM_TAG_LENGTH, archive.copyOfRange(0, GCM_IV_LENGTH))
+        )
+        return cipher.doFinal(archive.copyOfRange(GCM_IV_LENGTH, archive.size))
+    }
+
+    /**
      * Encrypts and writes the signature. The archive is staged and renamed into place so an
      * interruption cannot leave the previous signature half-overwritten; the old code wrote
      * straight to the live file, and a crash there destroyed it.
@@ -82,16 +104,10 @@ object SignatureStorage {
         return try {
             val stream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-            val plainBytes = stream.toByteArray()
-
-            val cipher = Cipher.getInstance(TRANSFORMATION)
-            cipher.init(Cipher.ENCRYPT_MODE, existingKey() ?: createKey())
-            val iv = cipher.iv
-            val cipherBytes = cipher.doFinal(plainBytes)
+            val archive = sealWithKey(existingKey() ?: createKey(), stream.toByteArray())
 
             FileOutputStream(staging).use { fos ->
-                fos.write(iv)
-                fos.write(cipherBytes)
+                fos.write(archive)
                 fos.flush()
             }
             if (!staging.renameTo(targetFile)) {
@@ -106,8 +122,13 @@ object SignatureStorage {
         }
     }
 
-    fun status(context: Context): SignatureStatus = when (decode(signatureFile(context))) {
-        is DecodeResult.Ok -> SignatureStatus.READY
+    fun status(context: Context): SignatureStatus = when (val result = decode(signatureFile(context))) {
+        // The probe exists to answer "can this be opened", not to hand out pixels; leaving the
+        // decoded bitmap to the GC turned every status check into an allocation burst.
+        is DecodeResult.Ok -> {
+            result.bitmap.recycle()
+            SignatureStatus.READY
+        }
         is DecodeResult.Failure -> SignatureStatus.UNREADABLE
         DecodeResult.Absent -> SignatureStatus.NONE
     }
@@ -143,11 +164,7 @@ object SignatureStorage {
             ?: return DecodeResult.Failure("the device key that encrypted it is gone")
         return try {
             val allBytes = FileInputStream(file).use { it.readBytes() }
-            val iv = allBytes.copyOfRange(0, GCM_IV_LENGTH)
-            val cipherBytes = allBytes.copyOfRange(GCM_IV_LENGTH, allBytes.size)
-            val cipher = Cipher.getInstance(TRANSFORMATION)
-            cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(GCM_TAG_LENGTH, iv))
-            val plainBytes = cipher.doFinal(cipherBytes)
+            val plainBytes = openWithKey(key, allBytes)
             val bitmap = BitmapFactory.decodeByteArray(plainBytes, 0, plainBytes.size)
             if (bitmap == null) DecodeResult.Failure("the decrypted bytes are not an image")
             else DecodeResult.Ok(bitmap)
