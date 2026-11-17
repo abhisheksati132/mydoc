@@ -206,7 +206,9 @@ class UpdateManager(
                 setStateIfCurrent(gen, UpdateUiState.Downloading(percent, downloaded, total))
             }
             val downloadResult = runCatching {
-                val checksum = apkDownloader.fetchChecksumText(checkNotNull(release.checksumUrl))
+                val checksum = release.checksumUrl
+                    ?.let { apkDownloader.fetchChecksumText(it) }
+                    ?: checkNotNull(release.assetSha256) { "Release is missing checksum data" }
                 apkDownloader.downloadApk(release.apkDownloadUrl, targetName, checksum, onProgress).getOrThrow()
             }.recoverCatching { error ->
                 if (error is kotlinx.coroutines.CancellationException) throw error
