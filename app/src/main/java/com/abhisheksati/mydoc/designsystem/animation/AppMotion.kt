@@ -13,9 +13,11 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.unit.IntOffset
 
 /**
  * The motion contract. Crisp and fast, minimal bounce, one grammar:
@@ -23,6 +25,8 @@ import androidx.compose.ui.geometry.Rect
  * - Hero (list row -> viewer): the element itself carries the transition; containers cross-fade.
  * - Detail (container -> viewer): rises ~10% of the viewport, settles, never overshoots.
  * - Peer (tab <-> tab, screen <-> screen): shared horizontal axis, ~1/6 of the width.
+ * - Stack (category -> category inside one surface): the same axis as the gesture that switched.
+ * - List (add/remove/reorder): items glide to their new slot and fade at the edges. See itemMotion.
  * - Press: a short 0.972 dip, then a restrained spring return. See PressScaleEffect.
  *
  * If a screen needs motion, it uses these — no ad-hoc springs.
@@ -38,6 +42,14 @@ object AppMotion {
     /** Softer settle for large surfaces. */
     fun <T> settle(): FiniteAnimationSpec<T> =
         spring(dampingRatio = 1f, stiffness = Spring.StiffnessMediumLow)
+
+    /** Lazy-list placement: an item moves to its new slot without overshoot or sub-pixel jitter. */
+    fun placement(): FiniteAnimationSpec<IntOffset> =
+        spring(
+            dampingRatio = 1f,
+            stiffness = Spring.StiffnessMediumLow,
+            visibilityThreshold = IntOffset.VisibilityThreshold
+        )
 
     /** Shared jelly press timings; cancel and reduced-motion paths remain still. */
     fun <T> pressIn(): FiniteAnimationSpec<T> = spring(dampingRatio = 0.72f, stiffness = 900f)
@@ -73,6 +85,20 @@ object AppMotion {
     fun peerExit(forward: Boolean): ExitTransition =
         slideOutHorizontally(animationSpec = snappy()) { width ->
             if (forward) -width / 8 else width / 8
+        } + fadeOut(fadeFast)
+
+    /**
+     * Siblings swapped inside one surface along the vertical axis (tool categories).
+     * [forward] means the user stepped down the list, so the new content rises from below.
+     */
+    fun stackEnter(forward: Boolean): EnterTransition =
+        slideInVertically(animationSpec = snappy()) { height ->
+            if (forward) height / 10 else -height / 10
+        } + fadeIn(fadeBase)
+
+    fun stackExit(forward: Boolean): ExitTransition =
+        slideOutVertically(animationSpec = snappy()) { height ->
+            if (forward) -height / 10 else height / 10
         } + fadeOut(fadeFast)
 
     /** Fallback for any two screens without a spatial relationship. */

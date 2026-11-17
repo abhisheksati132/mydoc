@@ -8,13 +8,16 @@ import com.abhisheksati.mydoc.designsystem.components.LocalFloatingChromeInset
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppSearchField
 import com.abhisheksati.mydoc.designsystem.animation.AppMotion
+import com.abhisheksati.mydoc.designsystem.animation.itemMotion
 import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
@@ -138,6 +141,7 @@ fun ToolsScreen(
     glassMotion: GlassMotionState? = null
 ) {
     val colors = AppTheme.colors
+    val reducedMotion = LocalReducedMotion.current
     val listState = rememberLazyListState()
     if (glassMotion != null) {
         TrackGlassMotion(listState, glassMotion)
@@ -207,8 +211,8 @@ fun ToolsScreen(
 
         AnimatedVisibility(
             visible = isSearchActive,
-            enter = if (LocalReducedMotion.current) androidx.compose.animation.EnterTransition.None else fadeIn(AppMotion.fadeFast),
-            exit = if (LocalReducedMotion.current) androidx.compose.animation.ExitTransition.None else fadeOut(AppMotion.fadeFast)
+            enter = if (reducedMotion) androidx.compose.animation.EnterTransition.None else fadeIn(AppMotion.fadeFast),
+            exit = if (reducedMotion) androidx.compose.animation.ExitTransition.None else fadeOut(AppMotion.fadeFast)
         ) {
             AppSearchField(
                 query = searchQuery,
@@ -238,11 +242,34 @@ fun ToolsScreen(
                     }
                 )
         ) {
-            val activeCategory = toolCategories.first { it.group == selectedGroup }
             OutlinedButton(onClick = { categoryMenuExpanded = true }, shape = AppRadius.pillShape) {
-                Icon(activeCategory.icon, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.size(8.dp))
-                Text(stringResource(activeCategory.labelRes), modifier = Modifier.weight(1f, fill = false))
+                AnimatedContent(
+                    targetState = selectedGroup,
+                    transitionSpec = {
+                        // A swipe up steps down the list, so the incoming label rises from below.
+                        val forward = toolCategories.indexOfFirst { it.group == targetState } >
+                            toolCategories.indexOfFirst { it.group == initialState }
+                        if (reducedMotion) {
+                            androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None
+                        } else {
+                            AppMotion.stackEnter(forward) togetherWith AppMotion.stackExit(forward)
+                        }
+                    },
+                    contentAlignment = Alignment.CenterStart,
+                    modifier = Modifier.weight(1f, fill = false),
+                    label = "toolCategory"
+                ) { group ->
+                    val category = toolCategories.first { it.group == group }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(category.icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.size(8.dp))
+                        Text(
+                            stringResource(category.labelRes),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
                 Spacer(Modifier.size(8.dp))
                 Icon(Icons.Outlined.ExpandMore, contentDescription = null)
             }
@@ -274,26 +301,30 @@ fun ToolsScreen(
         ) {
             if (featured.isNotEmpty()) {
                 item(key = "featured_tools_title") {
-                    Text(stringResource(R.string.tools_featured), style = AppTheme.typography.heading,
-                        color = colors.ink, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                    Box(itemMotion(reducedMotion)) {
+                        Text(stringResource(R.string.tools_featured), style = AppTheme.typography.heading,
+                            color = colors.ink, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                    }
                 }
                 featured.chunked(featuredColumns).forEach { row ->
                     item(key = "featured_${row.first().name}") {
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            row.forEach { tool ->
-                                val tone = when (tool) {
-                                    PdfTool.SCAN_TO_PDF -> colors.accentAmber
-                                    PdfTool.MERGE -> colors.accentCyan
-                                    PdfTool.SIGN_PDF -> colors.accent
-                                    else -> colors.accentGreen
+                        Box(itemMotion(reducedMotion)) {
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                row.forEach { tool ->
+                                    val tone = when (tool) {
+                                        PdfTool.SCAN_TO_PDF -> colors.accentAmber
+                                        PdfTool.MERGE -> colors.accentCyan
+                                        PdfTool.SIGN_PDF -> colors.accent
+                                        else -> colors.accentGreen
+                                    }
+                                    PaperActionCard(
+                                        stringResource(tool.titleRes), tool.icon, { onToolClick(tool) },
+                                        modifier = Modifier.weight(1f),
+                                        description = stringResource(tool.descriptionRes),
+                                        tone = tone
+                                    )
                                 }
-                                PaperActionCard(
-                                    stringResource(tool.titleRes), tool.icon, { onToolClick(tool) },
-                                    modifier = Modifier.weight(1f),
-                                    description = stringResource(tool.descriptionRes),
-                                    tone = tone
-                                )
                             }
                         }
                     }
@@ -301,12 +332,14 @@ fun ToolsScreen(
             }
             if (visibleTools.isEmpty()) {
                 item(key = "empty") {
-                    ToolsEmptyState(
-                        onClear = {
-                            searchQuery = ""
-                            selectedGroup = null
-                        }
-                    )
+                    Box(itemMotion(reducedMotion)) {
+                        ToolsEmptyState(
+                            onClear = {
+                                searchQuery = ""
+                                selectedGroup = null
+                            }
+                        )
+                    }
                 }
             } else {
                 val groupsToDisplay = when {
@@ -321,22 +354,26 @@ fun ToolsScreen(
                     if (toolsInGroup.isEmpty()) return@forEachIndexed
 
                     item(key = "header_${group.name}") {
-                        Text(
-                            text = stringResource(friendlyHeader(group)),
-                            style = AppTheme.typography.heading,
-                            color = colors.inkPrimary,
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = if (groupIndex == 0) 8.dp else 24.dp, bottom = 8.dp)
-                        )
+                        Box(itemMotion(reducedMotion)) {
+                            Text(
+                                text = stringResource(friendlyHeader(group)),
+                                style = AppTheme.typography.heading,
+                                color = colors.inkPrimary,
+                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = if (groupIndex == 0) 8.dp else 24.dp, bottom = 8.dp)
+                            )
+                        }
                     }
 
                     items(
                         count = toolsInGroup.size,
                         key = { index -> "tool_${toolsInGroup[index].name}" }
                     ) { index ->
-                        ToolRow(
-                            tool = toolsInGroup[index],
-                            onClick = { onToolClick(toolsInGroup[index]) }
-                        )
+                        Box(Modifier.fillMaxWidth().then(itemMotion(reducedMotion))) {
+                            ToolRow(
+                                tool = toolsInGroup[index],
+                                onClick = { onToolClick(toolsInGroup[index]) }
+                            )
+                        }
                     }
                 }
             }

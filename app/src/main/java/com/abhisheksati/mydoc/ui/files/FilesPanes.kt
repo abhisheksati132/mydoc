@@ -94,6 +94,11 @@ import com.abhisheksati.mydoc.designsystem.components.GlassMotionState
 import com.abhisheksati.mydoc.designsystem.components.TrackGlassMotion
 import com.abhisheksati.mydoc.designsystem.components.tonalSheen
 import com.abhisheksati.mydoc.designsystem.animation.StaggeredReveal
+import com.abhisheksati.mydoc.designsystem.animation.itemMotion
+import com.abhisheksati.mydoc.designsystem.animation.AppMotion
+import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.togetherWith
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.domain.model.DocumentTypeFilter
@@ -186,20 +191,70 @@ fun BrowseHomePane(
     hazeState: HazeState? = null,
     glassMotion: GlassMotionState? = null
 ) {
-    val scheme = MaterialTheme.colorScheme
     val listState = rememberLazyListState()
     if (glassMotion != null) {
         TrackGlassMotion(listState, glassMotion)
     }
-    if (storageUiState.isLoading && (storageUiState.analyzedVolumePath == null ||
-        storageUiState.analyzedVolumePath != storageUiState.activeVolume?.path)) {
-        Column(
-            modifier = modifier.then(if (hazeState != null) Modifier.hazeSource(hazeState) else Modifier)
-        ) {
-            BrowseSkeleton()
+    val showSkeleton = storageUiState.isLoading && (storageUiState.analyzedVolumePath == null ||
+        storageUiState.analyzedVolumePath != storageUiState.activeVolume?.path)
+    val reducedMotion = LocalReducedMotion.current
+    AnimatedContent(
+        targetState = showSkeleton,
+        transitionSpec = {
+            if (reducedMotion) {
+                androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None
+            } else {
+                AppMotion.neutralEnter() togetherWith AppMotion.neutralExit()
+            }
+        },
+        label = "browseHome"
+    ) { skeleton ->
+        if (skeleton) {
+            Column(
+                modifier = modifier.then(if (hazeState != null) Modifier.hazeSource(hazeState) else Modifier)
+            ) {
+                BrowseSkeleton()
+            }
+        } else {
+            BrowseHomeContent(
+                storageUiState = storageUiState,
+                volumes = volumes,
+                pinnedFolders = pinnedFolders,
+                onBrowseInternal = onBrowseInternal,
+                onBrowseVolume = onBrowseVolume,
+                onCategory = onCategory,
+                onFolder = onFolder,
+                onOpenTrash = onOpenTrash,
+                onApps = onApps,
+                onInsights = onInsights,
+                onClean = onClean,
+                listState = listState,
+                modifier = modifier,
+                hazeState = hazeState
+            )
         }
-        return
     }
+}
+
+@Composable
+private fun BrowseHomeContent(
+    storageUiState: StorageAnalysisUiState,
+    volumes: List<StorageVolume>,
+    pinnedFolders: List<File>,
+    onBrowseInternal: () -> Unit,
+    onBrowseVolume: (StorageVolume) -> Unit,
+    onCategory: (FileCategory) -> Unit,
+    onFolder: (File) -> Unit,
+    onOpenTrash: () -> Unit,
+    onApps: () -> Unit,
+    onInsights: () -> Unit,
+    onClean: () -> Unit,
+    listState: LazyListState,
+    modifier: Modifier = Modifier,
+    hazeState: HazeState? = null
+) {
+    val scheme = MaterialTheme.colorScheme
+    val reducedMotion = LocalReducedMotion.current
     LazyColumn(
         state = listState,
         modifier = modifier.then(if (hazeState != null) Modifier.hazeSource(hazeState) else Modifier),
@@ -246,13 +301,15 @@ fun BrowseHomePane(
                 FilesSectionHeader(title = stringResource(R.string.section_pinned))
             }
             items(pinnedFolders, key = { "pin_${it.absolutePath}" }) { folder ->
-                LocationRow(
-                    title = folder.name,
-                    meta = folder.absolutePath,
-                    icon = Icons.Outlined.Folder,
-                    onClick = { onFolder(folder) },
-                    modifier = Modifier.padding(horizontal = 10.dp)
-                )
+                Box(itemMotion(reducedMotion)) {
+                    LocationRow(
+                        title = folder.name,
+                        meta = folder.absolutePath,
+                        icon = Icons.Outlined.Folder,
+                        onClick = { onFolder(folder) },
+                        modifier = Modifier.padding(horizontal = 10.dp)
+                    )
+                }
             }
         }
 
@@ -288,13 +345,15 @@ fun BrowseHomePane(
                 items = secondaryVolumes,
                 key = { "vol_${it.path}" }
             ) { volume ->
-                LocationRow(
-                    title = stringResource(volume.titleRes),
-                    meta = "${volume.formattedFree} free of ${volume.formattedTotal}",
-                    icon = Icons.Outlined.SdCard,
-                    onClick = { onBrowseVolume(volume) },
-                    modifier = Modifier.padding(horizontal = 10.dp)
-                )
+                Box(itemMotion(reducedMotion)) {
+                    LocationRow(
+                        title = stringResource(volume.titleRes),
+                        meta = "${volume.formattedFree} free of ${volume.formattedTotal}",
+                        icon = Icons.Outlined.SdCard,
+                        onClick = { onBrowseVolume(volume) },
+                        modifier = Modifier.padding(horizontal = 10.dp)
+                    )
+                }
             }
         }
     }
@@ -746,131 +805,166 @@ fun DirectoryPane(
 
         val hasFilters = imageFolder != null || uiState.searchQuery.isNotBlank() || uiState.advancedSearch != null ||
             (isDocumentsCategory && selectedDocFilter != DocumentTypeFilter.ALL)
-        if (uiState.isLoading && (!uiState.isRefreshing || displayedItems.isEmpty())) {
-            Column(
-                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(stringResource(R.string.files_loading), style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                repeat(4) { SkeletonBlock(Modifier.fillMaxWidth().height(72.dp)) }
-            }
-        } else if (displayedItems.isEmpty()) {
-            FilesEmptyState(
-                icon = Icons.Outlined.FolderOpen,
-                title = if (uiState.searchQuery.isNotBlank() || uiState.advancedSearch != null) {
-                    stringResource(R.string.empty_no_matches)
-                } else if (isDocumentsCategory && selectedDocFilter != DocumentTypeFilter.ALL) {
-                    stringResource(R.string.empty_no_documents, selectedDocFilter.label)
+        val paneMode = when {
+            uiState.isLoading && (!uiState.isRefreshing || displayedItems.isEmpty()) -> PaneMode.Loading
+            displayedItems.isEmpty() -> PaneMode.Empty
+            uiState.isGridView -> PaneMode.Grid
+            else -> PaneMode.List
+        }
+        val reducedMotion = LocalReducedMotion.current
+        AnimatedContent(
+            targetState = paneMode,
+            transitionSpec = {
+                if (reducedMotion) {
+                    androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None
                 } else {
-                    stringResource(R.string.empty_folder)
-                },
-                message = if (uiState.searchQuery.isNotBlank() || uiState.advancedSearch != null) {
-                    stringResource(R.string.empty_try_search)
-                } else if (isDocumentsCategory && selectedDocFilter != DocumentTypeFilter.ALL) {
-                    stringResource(R.string.empty_no_files_in_documents, selectedDocFilter.label)
-                } else {
-                    stringResource(R.string.empty_create_hint)
-                },
-                actionLabel = if (hasFilters && onClearFilters != null) stringResource(R.string.search_clear_filters) else null,
-                onAction = if (hasFilters) onClearFilters else null
-            )
-        } else if (uiState.isGridView) {
-            // The photo gallery is a wall of images: three fixed columns, hairline gutters,
-            // date headers, so each picture gets the cell instead of a padded card.
-            val gallery = isImagesCategory
-            val groups = if (gallery) {
-                photoGroupsByDate(
-                    items = displayedItems,
-                    todayLabel = stringResource(R.string.gallery_today),
-                    yesterdayLabel = stringResource(R.string.gallery_yesterday),
-                    weekLabel = stringResource(R.string.gallery_this_week),
-                    monthLabel = stringResource(R.string.gallery_this_month),
-                    earlierLabel = stringResource(R.string.gallery_earlier)
-                )
-            } else {
-                emptyList()
-            }
-            LazyVerticalGrid(
-                state = gridState,
-                columns = if (gallery) {
-                    GridCells.Fixed(3)
-                } else {
-                    GridCells.Adaptive(minSize = 108.dp * LocalDensity.current.fontScale.coerceAtLeast(1f))
-                },
-                contentPadding = if (gallery) {
-                    PaddingValues(start = 2.dp, top = 2.dp, end = 2.dp, bottom = LocalFloatingChromeInset.current + 24.dp)
-                } else {
-                    PaddingValues(start = 10.dp, top = 4.dp, end = 10.dp, bottom = LocalFloatingChromeInset.current + 24.dp)
-                },
-                horizontalArrangement = Arrangement.spacedBy(if (gallery) 2.dp else 4.dp),
-                verticalArrangement = Arrangement.spacedBy(if (gallery) 2.dp else 4.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .then(hazeModifier)
-            ) {
-                if (gallery) {
-                    groups.forEach { group ->
-                        item(key = "photo_header_${group.key}", span = { GridItemSpan(maxLineSpan) }) {
-                            Text(
-                                text = group.label,
-                                style = AppTheme.typography.overline,
-                                color = AppTheme.colors.inkMuted,
-                                modifier = Modifier.padding(start = 10.dp, top = 16.dp, bottom = 6.dp)
-                            )
-                        }
-                        items(group.photos, key = { it.path }) { item ->
-                            GalleryCell(
-                                item = item,
-                                isSelected = selectedFiles.contains(item.file),
-                                isSelectionMode = inSelectionMode,
-                                onClick = {
-                                    if (inSelectionMode) onToggleSelection(item) else onOpenItem(item)
-                                },
-                                onLongClick = { onToggleSelection(item) }
-                            )
-                        }
-                    }
-                } else {
-                    items(displayedItems, key = { it.path }) { item ->
-                        FileGridCell(
-                            item = item,
-                            isSelected = selectedFiles.contains(item.file),
-                            isSelectionMode = inSelectionMode,
-                            onClick = {
-                                if (inSelectionMode) onToggleSelection(item) else onOpenItem(item)
-                            },
-                            onLongClick = { onToggleSelection(item) }
-                        )
+                    AppMotion.neutralEnter() togetherWith AppMotion.neutralExit()
+                }
+            },
+            label = "directoryPane"
+        ) { mode ->
+            when (mode) {
+                PaneMode.Loading -> {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(stringResource(R.string.files_loading), style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                        repeat(4) { SkeletonBlock(Modifier.fillMaxWidth().height(72.dp)) }
                     }
                 }
-            }
-        } else {
-            LazyColumn(
-                state = listState,
-                contentPadding = PaddingValues(top = 4.dp, bottom = LocalFloatingChromeInset.current + 24.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .then(hazeModifier)
-            ) {
-                items(displayedItems, key = { it.path }) { item ->
-                    val selected = selectedFiles.contains(item.file)
-                    FileRow(
-                        item = item,
-                        isSelected = selected,
-                        isSelectionMode = inSelectionMode,
-                        onClick = {
-                            if (uiState.isSelectionMode) onToggleSelection(item) else onOpenItem(item)
+                PaneMode.Empty -> {
+                    FilesEmptyState(
+                        icon = Icons.Outlined.FolderOpen,
+                        title = if (uiState.searchQuery.isNotBlank() || uiState.advancedSearch != null) {
+                            stringResource(R.string.empty_no_matches)
+                        } else if (isDocumentsCategory && selectedDocFilter != DocumentTypeFilter.ALL) {
+                            stringResource(R.string.empty_no_documents, selectedDocFilter.label)
+                        } else {
+                            stringResource(R.string.empty_folder)
                         },
-                        onLongClick = { onToggleSelection(item) },
-                        onMoreClick = { onMoreItem(item) },
-                        showFileSize = !isImagesCategory || inSelectionMode
+                        message = if (uiState.searchQuery.isNotBlank() || uiState.advancedSearch != null) {
+                            stringResource(R.string.empty_try_search)
+                        } else if (isDocumentsCategory && selectedDocFilter != DocumentTypeFilter.ALL) {
+                            stringResource(R.string.empty_no_files_in_documents, selectedDocFilter.label)
+                        } else {
+                            stringResource(R.string.empty_create_hint)
+                        },
+                        actionLabel = if (hasFilters && onClearFilters != null) stringResource(R.string.search_clear_filters) else null,
+                        onAction = if (hasFilters) onClearFilters else null
                     )
+                }
+                PaneMode.Grid -> {
+                    // The photo gallery is a wall of images: three fixed columns, hairline gutters,
+                    // date headers, so each picture gets the cell instead of a padded card.
+                    val gallery = isImagesCategory
+                    val groups = if (gallery) {
+                        photoGroupsByDate(
+                            items = displayedItems,
+                            todayLabel = stringResource(R.string.gallery_today),
+                            yesterdayLabel = stringResource(R.string.gallery_yesterday),
+                            weekLabel = stringResource(R.string.gallery_this_week),
+                            monthLabel = stringResource(R.string.gallery_this_month),
+                            earlierLabel = stringResource(R.string.gallery_earlier)
+                        )
+                    } else {
+                        emptyList()
+                    }
+                    LazyVerticalGrid(
+                        state = gridState,
+                        columns = if (gallery) {
+                            GridCells.Fixed(3)
+                        } else {
+                            GridCells.Adaptive(minSize = 108.dp * LocalDensity.current.fontScale.coerceAtLeast(1f))
+                        },
+                        contentPadding = if (gallery) {
+                            PaddingValues(start = 2.dp, top = 2.dp, end = 2.dp, bottom = LocalFloatingChromeInset.current + 24.dp)
+                        } else {
+                            PaddingValues(start = 10.dp, top = 4.dp, end = 10.dp, bottom = LocalFloatingChromeInset.current + 24.dp)
+                        },
+                        horizontalArrangement = Arrangement.spacedBy(if (gallery) 2.dp else 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(if (gallery) 2.dp else 4.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(hazeModifier)
+                    ) {
+                        if (gallery) {
+                            groups.forEach { group ->
+                                item(key = "photo_header_${group.key}", span = { GridItemSpan(maxLineSpan) }) {
+                                    Box(itemMotion(reducedMotion)) {
+                                        Text(
+                                            text = group.label,
+                                            style = AppTheme.typography.overline,
+                                            color = AppTheme.colors.inkMuted,
+                                            modifier = Modifier.padding(start = 10.dp, top = 16.dp, bottom = 6.dp)
+                                        )
+                                    }
+                                }
+                                items(group.photos, key = { it.path }) { item ->
+                                    Box(itemMotion(reducedMotion)) {
+                                        GalleryCell(
+                                            item = item,
+                                            isSelected = selectedFiles.contains(item.file),
+                                            isSelectionMode = inSelectionMode,
+                                            onClick = {
+                                                if (inSelectionMode) onToggleSelection(item) else onOpenItem(item)
+                                            },
+                                            onLongClick = { onToggleSelection(item) }
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            items(displayedItems, key = { it.path }) { item ->
+                                Box(itemMotion(reducedMotion)) {
+                                    FileGridCell(
+                                        item = item,
+                                        isSelected = selectedFiles.contains(item.file),
+                                        isSelectionMode = inSelectionMode,
+                                        onClick = {
+                                            if (inSelectionMode) onToggleSelection(item) else onOpenItem(item)
+                                        },
+                                        onLongClick = { onToggleSelection(item) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                PaneMode.List -> {
+                    LazyColumn(
+                        state = listState,
+                        contentPadding = PaddingValues(top = 4.dp, bottom = LocalFloatingChromeInset.current + 24.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(hazeModifier)
+                    ) {
+                        items(displayedItems, key = { it.path }) { item ->
+                            val selected = selectedFiles.contains(item.file)
+                            Box(Modifier.fillMaxWidth().then(itemMotion(reducedMotion))) {
+                                FileRow(
+                                    item = item,
+                                    isSelected = selected,
+                                    isSelectionMode = inSelectionMode,
+                                    onClick = {
+                                        if (uiState.isSelectionMode) onToggleSelection(item) else onOpenItem(item)
+                                    },
+                                    onLongClick = { onToggleSelection(item) },
+                                    onMoreClick = { onMoreItem(item) },
+                                    showFileSize = !isImagesCategory || inSelectionMode
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 }
+
+/** What the directory body is showing; the body crossfades between these instead of snapping. */
+private enum class PaneMode { Loading, Empty, Grid, List }
 
 @Composable
 private fun sortLabel(field: FileSortField): String = when (field) {

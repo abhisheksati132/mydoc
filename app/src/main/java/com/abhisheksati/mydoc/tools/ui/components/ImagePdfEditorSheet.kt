@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import com.abhisheksati.mydoc.designsystem.animation.itemMotion
+import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -258,6 +260,7 @@ fun ImagePdfEditorSheet(
                         }
                         val currentIndex = pagerState.currentPage.coerceIn(0, pages.lastIndex)
                         val currentPage = pages[currentIndex]
+                        val reducedMotion = LocalReducedMotion.current
 
                         HorizontalPager(
                             state = pagerState,
@@ -286,15 +289,19 @@ fun ImagePdfEditorSheet(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             itemsIndexed(pages, key = { _, page -> page.file.absolutePath }) { index, page ->
-                                PageThumbnail(
-                                    page = page,
-                                    index = index,
-                                    selected = index == currentIndex,
-                                    onClick = { scope.launch { pagerState.scrollToPage(index) } }
-                                )
+                                Box(itemMotion(reducedMotion)) {
+                                    PageThumbnail(
+                                        page = page,
+                                        index = index,
+                                        selected = index == currentIndex,
+                                        onClick = { scope.launch { pagerState.scrollToPage(index) } }
+                                    )
+                                }
                             }
                             item(key = "add_images") {
-                                AddImagesTile(onClick = { addImagesLauncher.launch(arrayOf("image/*")) })
+                                Box(itemMotion(reducedMotion)) {
+                                    AddImagesTile(onClick = { addImagesLauncher.launch(arrayOf("image/*")) })
+                                }
                             }
                         }
 

@@ -87,6 +87,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.designsystem.animation.documentHero
 import com.abhisheksati.mydoc.designsystem.animation.documentHeroKey
+import com.abhisheksati.mydoc.designsystem.animation.itemMotion
+import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
@@ -196,6 +198,7 @@ fun HomeFeedPane(
     } else {
         Modifier
     }
+    val reducedMotion = LocalReducedMotion.current
 
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
@@ -300,41 +303,49 @@ fun HomeFeedPane(
             // CONTINUE READING HERO CARD
             if (isLoading && heroItem == null && recentItems.isEmpty()) {
                 item(key = "feed_skeleton") {
-                    HomeFeedSkeleton()
+                    Box(itemMotion(reducedMotion)) {
+                        HomeFeedSkeleton()
+                    }
                 }
             } else if (heroItem != null) {
                 item(key = "hero_continue_reading") {
-                    ContinueReadingHeroCard(
-                        item = heroItem,
-                        onClick = {
-                            haptics.click()
-                            onLibraryItemClick(heroItem)
-                        }
-                    )
+                    Box(itemMotion(reducedMotion)) {
+                        ContinueReadingHeroCard(
+                            item = heroItem,
+                            onClick = {
+                                haptics.click()
+                                onLibraryItemClick(heroItem)
+                            }
+                        )
+                    }
                 }
             } else if (recentItems.isEmpty()) {
                 // CURATED FIRST-RUN EMPTY STATE
                 item(key = "first_run_empty_state") {
-                    FirstRunPaperCard(
-                        onOpenFile = { filePickerLauncher.launch(arrayOf("*/*")) },
-                        onScan = { onScanClick() },
-                        onBrowse = { onNavigateToLibrary() }
-                    )
+                    Box(itemMotion(reducedMotion)) {
+                        FirstRunPaperCard(
+                            onOpenFile = { filePickerLauncher.launch(arrayOf("*/*")) },
+                            onScan = { onScanClick() },
+                            onBrowse = { onNavigateToLibrary() }
+                        )
+                    }
                 }
             }
 
             if (heroItem != null || recentItems.isNotEmpty()) {
                 item(key = "home_primary_actions") {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        PaperActionCard(
-                            stringResource(R.string.home_action_open_title), Icons.Outlined.FolderOpen,
-                            onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
-                            modifier = Modifier.weight(1f)
-                        )
-                        PaperActionCard(
-                            stringResource(R.string.home_action_scan_title), Icons.Outlined.CameraAlt,
-                            onClick = onScanClick, modifier = Modifier.weight(1f), tone = colors.accentAmber
-                        )
+                    Box(itemMotion(reducedMotion)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            PaperActionCard(
+                                stringResource(R.string.home_action_open_title), Icons.Outlined.FolderOpen,
+                                onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            PaperActionCard(
+                                stringResource(R.string.home_action_scan_title), Icons.Outlined.CameraAlt,
+                                onClick = onScanClick, modifier = Modifier.weight(1f), tone = colors.accentAmber
+                            )
+                        }
                     }
                 }
             }
@@ -342,27 +353,31 @@ fun HomeFeedPane(
             // RECENT DOCUMENTS SECTION
             if (remainingRecents.isNotEmpty()) {
                 item(key = "recents_header") {
-                    RecentFilesHeader(
-                        count = remainingRecents.size,
-                        showPreviews = showRecentPreviews,
-                        onBrowse = onNavigateToLibrary,
-                        onTogglePreviews = { showRecentPreviews = !showRecentPreviews },
-                        modifier = Modifier.padding(top = AppSpacing.small, bottom = AppSpacing.xSmall)
-                    )
+                    Box(itemMotion(reducedMotion)) {
+                        RecentFilesHeader(
+                            count = remainingRecents.size,
+                            showPreviews = showRecentPreviews,
+                            onBrowse = onNavigateToLibrary,
+                            onTogglePreviews = { showRecentPreviews = !showRecentPreviews },
+                            modifier = Modifier.padding(top = AppSpacing.small, bottom = AppSpacing.xSmall)
+                        )
+                    }
                 }
 
                 if (!showRecentPreviews) {
                     items(remainingRecents, key = { it.uri }) { item ->
-                        RecentFileRow(
-                            item = item, selected = item.uri in selectedRecentUris, selectionMode = isRecentsSelectionActive,
-                            onClick = {
-                                if (isRecentsSelectionActive) onToggleRecentSelection(item)
-                                else { haptics.click(); onLibraryItemClick(item) }
-                            },
-                            onLongClick = { haptics.snap(); onToggleRecentSelection(item) },
-                            onDetails = { onLibraryItemDetails(item) }, onShare = { onShareDocument(item) },
-                            onRemove = { onRemoveFromRecents(item) }
-                        )
+                        Box(Modifier.fillMaxWidth().then(itemMotion(reducedMotion))) {
+                            RecentFileRow(
+                                item = item, selected = item.uri in selectedRecentUris, selectionMode = isRecentsSelectionActive,
+                                onClick = {
+                                    if (isRecentsSelectionActive) onToggleRecentSelection(item)
+                                    else { haptics.click(); onLibraryItemClick(item) }
+                                },
+                                onLongClick = { haptics.snap(); onToggleRecentSelection(item) },
+                                onDetails = { onLibraryItemDetails(item) }, onShare = { onShareDocument(item) },
+                                onRemove = { onRemoveFromRecents(item) }
+                            )
+                        }
                     }
                 } else {
                 // 2-Column Grid of Paper Cards (chunked in pairs)
@@ -371,36 +386,38 @@ fun HomeFeedPane(
                     items = chunkedRecents,
                     key = { chunk -> chunk.joinToString(",") { it.uri } }
                 ) { pair ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
-                    ) {
-                        pair.forEach { docItem ->
-                            Box(modifier = Modifier.weight(1f)) {
-                                RecentPaperCard(
-                                    item = docItem,
-                                    isSelected = docItem.uri in selectedRecentUris,
-                                    isSelectionMode = isRecentsSelectionActive,
-                                    onClick = {
-                                        haptics.click()
-                                        if (isRecentsSelectionActive) {
+                    Box(itemMotion(reducedMotion)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
+                        ) {
+                            pair.forEach { docItem ->
+                                Box(modifier = Modifier.weight(1f)) {
+                                    RecentPaperCard(
+                                        item = docItem,
+                                        isSelected = docItem.uri in selectedRecentUris,
+                                        isSelectionMode = isRecentsSelectionActive,
+                                        onClick = {
+                                            haptics.click()
+                                            if (isRecentsSelectionActive) {
+                                                onToggleRecentSelection(docItem)
+                                            } else {
+                                                onLibraryItemClick(docItem)
+                                            }
+                                        },
+                                        onLongClick = {
+                                            haptics.snap()
                                             onToggleRecentSelection(docItem)
-                                        } else {
-                                            onLibraryItemClick(docItem)
-                                        }
-                                    },
-                                    onLongClick = {
-                                        haptics.snap()
-                                        onToggleRecentSelection(docItem)
-                                    },
-                                    onDetails = { onLibraryItemDetails(docItem) },
-                                    onShare = { onShareDocument(docItem) },
-                                    onRemove = { onRemoveFromRecents(docItem) }
-                                )
+                                        },
+                                        onDetails = { onLibraryItemDetails(docItem) },
+                                        onShare = { onShareDocument(docItem) },
+                                        onRemove = { onRemoveFromRecents(docItem) }
+                                    )
+                                }
                             }
-                        }
-                        if (pair.size == 1 && previewColumns == 2) {
-                            Spacer(modifier = Modifier.weight(1f))
+                            if (pair.size == 1 && previewColumns == 2) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                 }                }

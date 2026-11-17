@@ -3,6 +3,11 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [Unreleased]
+
+### Changed
+- **Motion across the app** — one motion grammar now covers the transitions that used to snap: opening a Settings category pushes and Back pops it the other way, the Tools category pill slides with the swipe that switched it, and file lists, grids, gallery date groups, Home recents, tool rows and the image-to-PDF thumbnail strip glide to their new slots while additions fade in and removals fade out. Files' loading, empty, list and grid states cross-fade instead of hard-swapping, and every new animation collapses to no motion when the system animation scale is off.
+
 ## [2.0.17] — 2026-11-17
 
 ### Added
