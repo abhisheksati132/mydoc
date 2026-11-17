@@ -541,6 +541,41 @@ class StorageMoveTrashSafetyTest {
         )
     }
     @Test
+    fun `a folder move never follows a directory link out of the tree`() = runBlocking {
+        val source = tempFolder.newFolder("move-link-src")
+        File(source, "inside.txt").writeText("inside")
+        val outside = tempFolder.newFolder("move-link-outside")
+        val protectedFile = File(outside, "keep.txt").apply { writeText("keep") }
+        val link = File(source, "linked-directory").toPath()
+        try {
+            java.nio.file.Files.createSymbolicLink(link, outside.toPath())
+        } catch (e: java.io.IOException) {
+            org.junit.Assume.assumeNoException(e)
+        } catch (e: UnsupportedOperationException) {
+            org.junit.Assume.assumeNoException(e)
+        }
+        val target = tempFolder.newFolder("move-link-target")
+
+        repo(FakeMutator(forceCopyPath = true)).move(listOf(source), target).getOrThrow()
+
+        assertEquals(
+            "a move copied through a directory link and reached outside the folder",
+            "keep",
+            protectedFile.readText()
+        )
+        assertTrue(
+            "the copy of the move must still contain the ordinary file",
+            File(target, "move-link-src/inside.txt").isFile
+        )
+        assertTrue(
+            "the directory link must be recreated as a link entry, not expanded into a copy",
+            java.nio.file.Files.isSymbolicLink(
+                File(target, "move-link-src/linked-directory").toPath()
+            )
+        )
+    }
+
+    @Test
     fun `permanent trash deletion keeps a symlink target intact`() = runBlocking {
         val dao = InMemoryTrashDao()
         val repository = repo(FakeMutator(forceCopyPath = false), dao)
