@@ -256,6 +256,15 @@ fun BrowseHomePane(
             }
         }
 
+        // Shortcuts lead the pane: the storage card is a summary, not the first thing to read.
+        item(key = "browse_categories") {
+            CategoryShortcutGrid(
+                storageUiState = storageUiState,
+                onCategory = { if (it == FileCategory.APKS) onApps() else onCategory(it) },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
+        }
+
         item(key = "browse_storage") {
             StorageOverviewCard(
                 usedRatio = storageUiState.usedRatio,
@@ -288,20 +297,6 @@ fun BrowseHomePane(
                 )
             }
         }
-
-
-
-        item(key = "browse_categories_header") {
-            FilesSectionHeader(title = stringResource(R.string.section_categories))
-        }
-        item(key = "browse_categories") {
-            CategoryShortcutGrid(
-                storageUiState = storageUiState,
-                onCategory = { if (it == FileCategory.APKS) onApps() else onCategory(it) },
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-        }
-
     }
 }
 

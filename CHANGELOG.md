@@ -3,6 +3,20 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [Unreleased]
+
+### Added
+- **Image → PDF review editor** — picked images no longer convert straight away. A full-screen editor stages them with a swipeable preview, a numbered thumbnail strip that reorders pages, per-page rotate and crop, and per-page filters (Original, Doc Auto, B&W Clean, Grayscale, Vivid Color, Shadow Free). Page size (A4, A5, Letter, Legal, Fit to image), orientation (Auto, Portrait, Landscape), margins, image quality (High, Balanced, Compact) and an extra compression switch carry through to the PDF. Adjustments are baked once, at Create PDF; untouched images pass through byte-identical.
+- **Page-aware image PDFs** — the converter now reads each photo's EXIF orientation before choosing the page box, so AUTO turns the sheet to match the shot instead of shrinking it into bars, and decoding stops at the resolution the page can actually show.
+
+### Changed
+- **Library** — the shortcut row (Documents, Downloads, Images, Videos, Audio, APKs) leads the pane above the storage card, and the redundant "Categories" heading is gone.
+- **Tools** — the Start here/Organize/Edit/Sign category box switches categories on a vertical swipe, not just a tap.
+
+### Fixed
+- **Cache size reaches zero after Clear cache** — pending update APKs are no longer measured as clearable bytes, thumbnail and tile memory caches are evicted before the purge, and the storage row re-measures on entry instead of reusing the one-shot read taken when Settings opened.
+- **Update panel shows no GitHub changelog** — the update card lists the version without pulling release notes, and the website fallback no longer smuggles a "Release notes: <url>" line into the release model.
+
 ## [2.0.16] — 2026-11-17
 
 ### Fixed

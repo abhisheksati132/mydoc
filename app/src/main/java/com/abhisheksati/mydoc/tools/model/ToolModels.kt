@@ -48,8 +48,26 @@ enum class CompressionLevel(val label: String, val description: String) {
 
 enum class PageSizeFormat(val label: String, val widthPt: Float, val heightPt: Float) {
     A4("A4 (210 × 297 mm)", 595.28f, 841.89f),
+    A5("A5 (148 × 210 mm)", 419.53f, 595.28f),
     LETTER("Letter (8.5 × 11 in)", 612f, 792f),
+    LEGAL("Legal (8.5 × 14 in)", 612f, 1008f),
     FIT_IMAGE("Fit to Image", 0f, 0f)
+}
+
+enum class PageOrientation(val label: String) {
+    AUTO("Auto"),
+    PORTRAIT("Portrait"),
+    LANDSCAPE("Landscape")
+}
+
+enum class ImagePdfQuality(
+    val label: String,
+    val maxDimensionPx: Int,
+    val jpegQuality: Int
+) {
+    HIGH("High", 2480, 95),
+    BALANCED("Balanced", 1704, 88),
+    COMPACT("Compact", 1200, 78)
 }
 
 enum class PageMargin(val label: String, val marginPt: Float) {
@@ -90,6 +108,9 @@ data class ToolOptions(
     // Convert
     val pageSizeFormat: PageSizeFormat = PageSizeFormat.A4,
     val pageMargin: PageMargin = PageMargin.NONE,
+    val pageOrientation: PageOrientation = PageOrientation.AUTO,
+    val imagePdfQuality: ImagePdfQuality = ImagePdfQuality.BALANCED,
+    val imagePdfCompress: Boolean = false,
     val exportDpi: Int = 150,
     val exportFormatJpg: Boolean = true,
     val exportAsLongImage: Boolean = false,

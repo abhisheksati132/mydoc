@@ -67,6 +67,7 @@ import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.tools.model.ToolExecutionResult
 import com.abhisheksati.mydoc.tools.model.formatByteSize
+import com.abhisheksati.mydoc.tools.ui.components.ImagePdfEditorSheet
 import com.abhisheksati.mydoc.tools.ui.components.ToolOptionsSection
 import com.abhisheksati.mydoc.tools.viewmodel.ToolExecutionUiState
 import com.abhisheksati.mydoc.tools.viewmodel.ToolsViewModel
@@ -164,6 +165,25 @@ fun ToolRunnerSheet(
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
     ) { saveResultTo(it) }
+
+    // Image to PDF runs through a full-screen review editor: picked images are staged,
+    // cropped, ordered and filtered there, and only Create PDF starts the engine.
+    if (tool == PdfTool.IMAGE_TO_PDF &&
+        inputUris.isNotEmpty() &&
+        executionState is ToolExecutionUiState.Idle
+    ) {
+        ImagePdfEditorSheet(
+            initialUris = inputUris,
+            options = toolOptions,
+            onOptionsChange = { transform -> viewModel.updateOptions(transform) },
+            onDismiss = { viewModel.closeTool() },
+            onCreate = { uris ->
+                viewModel.setInputUris(uris)
+                viewModel.runTool()
+            }
+        )
+        return
+    }
 
     AppBottomSheet(
         isOpen = true,

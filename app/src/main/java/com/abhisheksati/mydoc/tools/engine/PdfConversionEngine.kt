@@ -11,7 +11,8 @@ import android.graphics.Typeface
 import androidx.exifinterface.media.ExifInterface
 import android.graphics.pdf.PdfDocument as AndroidPdfDocument
 import com.abhisheksati.mydoc.ocr.OcrEngine
-import com.abhisheksati.mydoc.tools.model.PageMargin
+import com.abhisheksati.mydoc.tools.model.ImagePdfQuality
+import com.abhisheksati.mydoc.tools.model.PageOrientation
 import com.abhisheksati.mydoc.tools.model.PageSizeFormat
 import com.abhisheksati.mydoc.tools.model.ToolOptions
 import com.abhisheksati.mydoc.tools.model.ToolProgress
@@ -40,8 +41,6 @@ import kotlin.math.max
 class PdfConversionEngine(private val context: Context) {
 
     private companion object {
-        /** Pixels per page point when decoding into a fixed page size. */
-        const val PAGE_SUPERSAMPLE = 2f
         const val MAX_SAMPLE_SIZE = 32
 
         /** Floor for the auto-reduced long-image scale, below which the output is unreadable. */
@@ -68,28 +67,31 @@ class PdfConversionEngine(private val context: Context) {
 
             files.forEachIndexed { index, imgFile ->
                 currentCoroutineContext().ensureActive()
-                // FIT_IMAGE sizes the page from the image, bounded to prevent OutOfMemory on huge images;
-                // a fixed page only needs enough pixels to fill it, so the rest is sampled away while decoding.
-                val budgetPx = when (options.pageSizeFormat) {
-                    PageSizeFormat.FIT_IMAGE -> 4096
-                    PageSizeFormat.A4 -> (max(
-                        PageSizeFormat.A4.widthPt, PageSizeFormat.A4.heightPt) * PAGE_SUPERSAMPLE).toInt()
-                    PageSizeFormat.LETTER -> (max(
-                        PageSizeFormat.LETTER.widthPt, PageSizeFormat.LETTER.heightPt) * PAGE_SUPERSAMPLE).toInt()
-                }
-                val bitmap = decodeSampled(imgFile, budgetPx)
-                if (bitmap == null) {
+                val probe = probeImage(imgFile)
+                if (probe == null) {
                     // An unreadable image is left out, but the caller is told: a file that silently
                     // loses pages must not be presented as a complete conversion.
                     skipped.add(imgFile.name)
                     return@forEachIndexed
                 }
 
-                val (pageWidth, pageHeight) = when (options.pageSizeFormat) {
-                    PageSizeFormat.A4 -> Pair(PageSizeFormat.A4.widthPt.toInt(), PageSizeFormat.A4.heightPt.toInt())
-                    PageSizeFormat.LETTER -> Pair(PageSizeFormat.LETTER.widthPt.toInt(), PageSizeFormat.LETTER.heightPt.toInt())
-                    PageSizeFormat.FIT_IMAGE -> Pair(bitmap.width, bitmap.height)
+                // AUTO turns the sheet to match the photo as the camera actually stores it,
+                // EXIF rotation included. A landscape shot on portrait A4 used to leave most
+                // of the page as white bars.
+                val landscape = if (probe.isQuarterTurn) !probe.isLandscape else probe.isLandscape
+                val pageDimensions = pdfPageDimensions(options.pageSizeFormat, options.pageOrientation, landscape)
+                val bitmap = decodeSampled(
+                    imgFile,
+                    pdfImageDecodeBudget(pageDimensions, options.imagePdfQuality, options.imagePdfCompress),
+                    probe
+                )
+                if (bitmap == null) {
+                    skipped.add(imgFile.name)
+                    return@forEachIndexed
                 }
+
+                val pageWidth = pageDimensions?.first?.toInt() ?: bitmap.width
+                val pageHeight = pageDimensions?.second?.toInt() ?: bitmap.height
 
                 val margin = options.pageMargin.marginPt
                 val availableW = (pageWidth - 2 * margin).coerceAtLeast(10f)
@@ -131,17 +133,49 @@ class PdfConversionEngine(private val context: Context) {
     }
 
     /**
-     * Decodes at no larger than the resolution the output can show, and rotates to match the
-     * camera's orientation tag: `BitmapFactory` ignores EXIF, so a portrait photo used to land on
-     * the page sideways at four times the pixels it needed.
+     * Header-only probe: pixel bounds plus the EXIF correction, so the page box can be chosen
+     * before any pixels are allocated.
      */
-    private fun decodeSampled(file: File, maxDimensionPx: Int): Bitmap? {
+    private class ImageProbe(
+        val width: Int,
+        val height: Int,
+        val rotationDegrees: Int,
+        val transform: android.graphics.Matrix?
+    ) {
+        val isLandscape: Boolean get() = width >= height
+        val isQuarterTurn: Boolean get() = rotationDegrees % 180 == 90
+    }
+
+    private fun probeImage(file: File): ImageProbe? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.absolutePath, bounds)
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
 
+        val rotation: Int
+        val flipped: Boolean
+        val exif = runCatching { ExifInterface(file) }.getOrNull()
+        if (exif == null) {
+            rotation = 0
+            flipped = false
+        } else {
+            rotation = exif.rotationDegrees
+            flipped = exif.isFlipped
+        }
+        val transform = if (rotation == 0 && !flipped) null else android.graphics.Matrix().apply {
+            if (flipped) setScale(-1f, 1f)
+            postRotate(rotation.toFloat())
+        }
+        return ImageProbe(bounds.outWidth, bounds.outHeight, rotation, transform)
+    }
+
+    /**
+     * Decodes at no larger than the resolution the output can show, then applies the EXIF
+     * transform: `BitmapFactory` ignores EXIF, so a portrait photo used to land on the page
+     * sideways at four times the pixels it needed.
+     */
+    private fun decodeSampled(file: File, maxDimensionPx: Int, probe: ImageProbe): Bitmap? {
         var sample = 1
-        while (max(bounds.outWidth, bounds.outHeight) / (sample.toLong() * 2) >= maxDimensionPx &&
+        while (max(probe.width, probe.height) / (sample.toLong() * 2) >= maxDimensionPx &&
             sample <= MAX_SAMPLE_SIZE
         ) {
             sample *= 2
@@ -152,7 +186,7 @@ class PdfConversionEngine(private val context: Context) {
             BitmapFactory.Options().apply { inSampleSize = sample }
         ) ?: return null
 
-        val transform = exifTransform(file)
+        val transform = probe.transform
         if (transform != null) {
             val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, transform, true)
             if (rotated !== bitmap) {
@@ -162,15 +196,6 @@ class PdfConversionEngine(private val context: Context) {
         }
         return bitmap
     }
-
-    private fun exifTransform(file: File): android.graphics.Matrix? = runCatching {
-        val exif = ExifInterface(file)
-        if (!exif.isFlipped && exif.rotationDegrees == 0) return@runCatching null
-        android.graphics.Matrix().apply {
-            if (exif.isFlipped) setScale(-1f, 1f)
-            postRotate(exif.rotationDegrees.toFloat())
-        }
-    }.getOrNull()
 
     suspend fun textOrCsvToPdf(file: File, onProgress: (ToolProgress) -> Unit): File {
         val lines = file.readLines()
@@ -728,6 +753,46 @@ class PdfConversionEngine(private val context: Context) {
 internal fun cappedRenderScale(widthPt: Float, heightPt: Float, baseScale: Float, maxPx: Float = 4096f): Float {
     val longest = max(widthPt * baseScale, heightPt * baseScale)
     return if (longest > maxPx) baseScale * (maxPx / longest) else baseScale
+}
+
+/** Pixels per page point when decoding an image into a fixed page box (~216 DPI at A4). */
+internal const val PDF_PAGE_SUPERSAMPLE = 3f
+
+private const val PDF_COMPRESS_SCALE = 0.65f
+private const val PDF_MIN_BUDGET_PX = 600
+
+/**
+ * Page box in points for a fixed page format, or null for FIT_IMAGE where the page becomes the
+ * image itself. [imageIsLandscape] only matters for AUTO, which turns the sheet to match the
+ * photo instead of shrinking it into bars.
+ */
+internal fun pdfPageDimensions(
+    format: PageSizeFormat,
+    orientation: PageOrientation,
+    imageIsLandscape: Boolean
+): Pair<Float, Float>? {
+    if (format == PageSizeFormat.FIT_IMAGE) return null
+    val useLandscape = when (orientation) {
+        PageOrientation.AUTO -> imageIsLandscape
+        PageOrientation.PORTRAIT -> false
+        PageOrientation.LANDSCAPE -> true
+    }
+    return if (useLandscape) Pair(format.heightPt, format.widthPt) else Pair(format.widthPt, format.heightPt)
+}
+
+/**
+ * Longest edge in pixels the chosen page can actually show, so decoding stops there instead of
+ * carrying a full camera frame into a 600 pt sheet. [compress] trades resolution for size.
+ */
+internal fun pdfImageDecodeBudget(
+    pageDimensions: Pair<Float, Float>?,
+    quality: ImagePdfQuality,
+    compress: Boolean
+): Int {
+    val pageBound = pageDimensions?.let { (w, h) -> max(w, h) * PDF_PAGE_SUPERSAMPLE } ?: Float.MAX_VALUE
+    val bounded = minOf(pageBound, quality.maxDimensionPx.toFloat())
+    val adjusted = if (compress) bounded * PDF_COMPRESS_SCALE else bounded
+    return adjusted.toInt().coerceAtLeast(PDF_MIN_BUDGET_PX)
 }
 
 /**

@@ -39,7 +39,10 @@ import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
 import com.abhisheksati.mydoc.designsystem.components.horizontalScrollWithFade
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.tools.model.CompressionLevel
+import com.abhisheksati.mydoc.tools.model.ImagePdfQuality
+import com.abhisheksati.mydoc.tools.model.PageMargin
 import com.abhisheksati.mydoc.tools.model.PageNumberPosition
+import com.abhisheksati.mydoc.tools.model.PageOrientation
 import com.abhisheksati.mydoc.tools.model.PageSizeFormat
 import com.abhisheksati.mydoc.tools.model.PdfTool
 import com.abhisheksati.mydoc.tools.model.ToolOptions
@@ -230,7 +233,12 @@ internal fun ToolOptionsSection(
             PdfTool.IMAGE_TO_PDF -> {
                 Text(text = stringResource(R.string.opt_page_size), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
-                Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScrollWithFade(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
+                ) {
                     PageSizeFormat.entries.forEach { fmt ->
                         AppFilterChip(
                             label = fmt.label,
@@ -238,6 +246,74 @@ internal fun ToolOptionsSection(
                             onClick = { onOptionsChange { it.copy(pageSizeFormat = fmt) } }
                         )
                     }
+                }
+                Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
+                Text(text = stringResource(R.string.opt_orientation), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScrollWithFade(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
+                ) {
+                    PageOrientation.entries.forEach { orientation ->
+                        AppFilterChip(
+                            label = orientation.label,
+                            isSelected = options.pageOrientation == orientation,
+                            onClick = { onOptionsChange { it.copy(pageOrientation = orientation) } }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
+                Text(text = stringResource(R.string.opt_page_margin), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScrollWithFade(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
+                ) {
+                    PageMargin.entries.forEach { margin ->
+                        AppFilterChip(
+                            label = margin.label,
+                            isSelected = options.pageMargin == margin,
+                            onClick = { onOptionsChange { it.copy(pageMargin = margin) } }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(AppSpacing.paddingMedium))
+                Text(text = stringResource(R.string.opt_image_quality), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(AppSpacing.paddingSmall))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScrollWithFade(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.paddingSmall)
+                ) {
+                    ImagePdfQuality.entries.forEach { quality ->
+                        AppFilterChip(
+                            label = quality.label,
+                            isSelected = options.imagePdfQuality == quality,
+                            onClick = { onOptionsChange { it.copy(imagePdfQuality = quality) } }
+                        )
+                    }
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = AppSpacing.paddingSmall),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.opt_compress_images),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Switch(
+                        checked = options.imagePdfCompress,
+                        onCheckedChange = { compress -> onOptionsChange { it.copy(imagePdfCompress = compress) } }
+                    )
                 }
             }
 

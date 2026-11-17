@@ -210,15 +210,6 @@ fun SettingsAboutSection(
                         style = typography.bodyLarge,
                         color = scheme.onSurface
                     )
-                    if (release.releaseNotes.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = release.releaseNotes.trim(),
-                            style = typography.bodyMedium,
-                            color = scheme.onSurfaceVariant,
-                            maxLines = 4
-                        )
-                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

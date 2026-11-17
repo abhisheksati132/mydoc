@@ -274,16 +274,17 @@ class SettingsRepository(private val context: Context) {
         )
     }
 
-    fun getCacheSizeBytes(context: Context): Long {
-        val internal = getFolderSize(context.cacheDir)
-        val externals = context.externalCacheDirs?.filterNotNull()?.sumOf { getFolderSize(it) } ?: 0L
-        return internal + externals
-    }
+    fun getCacheSizeBytes(context: Context): Long =
+        clearableCacheBytes(context.cacheDir, context.externalCacheDirs?.filterNotNull().orEmpty())
 
+    @OptIn(coil.annotation.ExperimentalCoilApi::class)
     fun clearCache(context: Context): Long {
-        val sizeBefore = getCacheSizeBytes(context)
+        val internalCache = context.cacheDir
+        val externalCaches = context.externalCacheDirs?.filterNotNull().orEmpty()
+        val sizeBefore = clearableCacheBytes(internalCache, externalCaches)
 
-        // 1. Evict in-memory thumbnail and tile render caches
+        // 1. Evict in-memory thumbnail and tile render caches; Coil drops its
+        //    disk journal once its loader releases the entry.
         runCatching {
             com.abhisheksati.mydoc.ui.files.clearThumbnailMemoryCache()
             com.abhisheksati.mydoc.rendering.cache.TileBitmapCache.clearAll()
@@ -291,43 +292,10 @@ class SettingsRepository(private val context: Context) {
             coil.Coil.imageLoader(context).diskCache?.clear()
         }
 
-        // 2. Clear internal cacheDir (preserving active updates)
-        context.cacheDir.listFiles()?.forEach { file ->
-            if (file.name == "updates") return@forEach
-            deleteRecursive(file)
-        }
+        purgeCacheDirectories(internalCache, externalCaches)
 
-        // 3. Clear all external cache directories (supports multi-volume SD cards)
-        context.externalCacheDirs?.filterNotNull()?.forEach { dir ->
-            dir.listFiles()?.forEach { file ->
-                deleteRecursive(file)
-            }
-        }
-
-        val sizeAfter = getCacheSizeBytes(context)
+        val sizeAfter = clearableCacheBytes(internalCache, externalCaches)
         return (sizeBefore - sizeAfter).coerceAtLeast(0L)
-    }
-
-    private fun getFolderSize(file: File?): Long {
-        if (file == null || !file.exists()) return 0L
-        if (file.isFile) return file.length()
-        var size = 0L
-        file.listFiles()?.forEach { child ->
-            size += getFolderSize(child)
-        }
-        return size
-    }
-
-    private fun deleteRecursive(file: File) {
-        try {
-            if (file.isDirectory) {
-                file.listFiles()?.forEach { deleteRecursive(it) }
-            }
-            if (!file.delete()) {
-                file.setWritable(true)
-                file.delete()
-            }
-        } catch (_: Throwable) {}
     }
 
     private fun loadThemeMode(): AppThemeMode {
@@ -400,5 +368,46 @@ class SettingsRepository(private val context: Context) {
         private const val KEY_READING_DUAL_PAGE = "reading_dual_page"
         private const val KEY_READING_FIT_PAGE = "reading_fit_page"
         private const val KEY_GLASS_EFFECT_MODE = "glass_effect_mode"
+
+        // Pending update APKs live in cacheDir/updates and survive a cache clear;
+        // they must not be measured either, or the size never reads zero.
+        private const val UPDATES_CACHE_DIR = "updates"
+
+        internal fun clearableCacheBytes(internalCache: File?, externalCaches: List<File>): Long =
+            folderSize(internalCache, skipNames = setOf(UPDATES_CACHE_DIR)) +
+                externalCaches.sumOf { folderSize(it) }
+
+        internal fun folderSize(file: File?, skipNames: Set<String> = emptySet()): Long {
+            if (file == null || !file.exists()) return 0L
+            if (file.isFile) return file.length()
+            var size = 0L
+            file.listFiles()?.forEach { child ->
+                if (child.name in skipNames) return@forEach
+                size += folderSize(child, skipNames)
+            }
+            return size
+        }
+
+        internal fun purgeCacheDirectories(internalCache: File?, externalCaches: List<File>) {
+            internalCache?.listFiles()?.forEach { child ->
+                if (child.name == UPDATES_CACHE_DIR) return@forEach
+                deleteRecursive(child)
+            }
+            externalCaches.forEach { dir ->
+                dir.listFiles()?.forEach { deleteRecursive(it) }
+            }
+        }
+
+        private fun deleteRecursive(file: File) {
+            try {
+                if (file.isDirectory) {
+                    file.listFiles()?.forEach { deleteRecursive(it) }
+                }
+                if (!file.delete()) {
+                    file.setWritable(true)
+                    file.delete()
+                }
+            } catch (_: Throwable) {}
+        }
     }
 }

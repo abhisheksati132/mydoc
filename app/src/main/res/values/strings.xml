@@ -94,7 +94,6 @@
     <string name="menu_refresh">Refresh</string>
     <string name="cd_settings">Settings</string>
     <string name="cd_details">Details</string>
-    <string name="section_categories">Categories</string>
     <string name="section_external_storage">External Storage</string>
     <string name="section_pinned">Pinned</string>
     <plurals name="trash_meta_count">
@@ -1186,4 +1185,34 @@
     <string name="batch_convert_pdf">Convert to PDF</string>
     <string name="page_highlight_title">Save page as highlight</string>
     <string name="page_highlight_supporting">Add this page\'s text to your study notes</string>
+    <!-- Image to PDF editor -->
+    <string name="opt_orientation">ORIENTATION</string>
+    <string name="opt_page_margin">PAGE MARGIN</string>
+    <string name="opt_image_quality">IMAGE QUALITY</string>
+    <string name="opt_compress_images">Compress images</string>
+    <string name="imgpdf_review_title">Review &amp; create</string>
+    <string name="imgpdf_section_filters">FILTER</string>
+    <string name="imgpdf_section_layout">PAGE STYLE</string>
+    <string name="imgpdf_section_output">OUTPUT</string>
+    <string name="imgpdf_add_images">Add images</string>
+    <string name="imgpdf_create_pdf">Create PDF</string>
+    <string name="imgpdf_creating">Creating PDF…</string>
+    <string name="imgpdf_none_readable">None of the selected images could be read.</string>
+    <string name="imgpdf_some_unreadable">%1$d images could not be read and were left out.</string>
+    <string name="imgpdf_import_failed">Could not add some images.</string>
+    <string name="imgpdf_crop_failed">Could not save the cropped image.</string>
+    <string name="imgpdf_empty_title">No images yet</string>
+    <string name="imgpdf_empty_body">Pick the photos you want in the PDF. You can crop, rotate, reorder and filter them here before converting.</string>
+    <string name="imgpdf_pick_images">Choose images</string>
+    <string name="imgpdf_rotate_left">Rotate left</string>
+    <string name="imgpdf_rotate_right">Rotate right</string>
+    <string name="imgpdf_crop">Crop</string>
+    <string name="imgpdf_move_left">Move earlier</string>
+    <string name="imgpdf_move_right">Move later</string>
+    <string name="imgpdf_remove_page">Remove page</string>
+    <string name="imgpdf_page_of">%1$d / %2$d</string>
+    <plurals name="imgpdf_page_count">
+        <item quantity="one">%d page selected</item>
+        <item quantity="other">%d pages selected</item>
+    </plurals>
 </resources>

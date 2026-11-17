@@ -4,7 +4,6 @@ import com.abhisheksati.mydoc.designsystem.components.AppDropdownMenu
 import com.abhisheksati.mydoc.designsystem.components.PaperActionCard
 import androidx.compose.ui.platform.LocalDensity
 
-import androidx.compose.runtime.setValue
 import com.abhisheksati.mydoc.designsystem.components.LocalFloatingChromeInset
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppSearchField
@@ -18,6 +17,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,9 +60,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.Alignment
@@ -141,6 +147,15 @@ fun ToolsScreen(
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
     var categoryMenuExpanded by remember { mutableStateOf(false) }
     var selectedGroup by rememberSaveable { mutableStateOf<ToolGroup?>(null) }
+    var categoryDragPx by remember { mutableFloatStateOf(0f) }
+    val categorySwipeThresholdPx = with(LocalDensity.current) { 44.dp.toPx() }
+    val scope = rememberCoroutineScope()
+    val switchCategory: (Int) -> Unit = { step ->
+        val currentIndex = toolCategories.indexOfFirst { it.group == selectedGroup }.coerceAtLeast(0)
+        val nextIndex = (currentIndex + step + toolCategories.size) % toolCategories.size
+        selectedGroup = toolCategories[nextIndex].group
+        scope.launch { listState.scrollToItem(0) }
+    }
     val searchFocusRequester = remember { FocusRequester() }
 
     // The pager keeps this screen composed off-screen; requesting focus there stole it from the
@@ -206,7 +221,23 @@ fun ToolsScreen(
         }
 
         // Keep every category one tap away without pushing tools below three rows of chips.
-        Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+        // Swiping the box up or down steps to the next / previous category; tapping still opens
+        // the explicit list for anyone who does not discover the gesture.
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .draggable(
+                    state = rememberDraggableState { delta -> categoryDragPx += delta },
+                    orientation = Orientation.Vertical,
+                    onDragStarted = { categoryDragPx = 0f },
+                    onDragStopped = {
+                        if (categoryDragPx <= -categorySwipeThresholdPx) switchCategory(1)
+                        else if (categoryDragPx >= categorySwipeThresholdPx) switchCategory(-1)
+                        categoryDragPx = 0f
+                    }
+                )
+        ) {
             val activeCategory = toolCategories.first { it.group == selectedGroup }
             OutlinedButton(onClick = { categoryMenuExpanded = true }, shape = AppRadius.pillShape) {
                 Icon(activeCategory.icon, contentDescription = null, modifier = Modifier.size(18.dp))

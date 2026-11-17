@@ -93,6 +93,17 @@ class GitHubUpdateFallbackTest {
     }
 
     @Test
+    fun `website fallback carries no changelog text`() {
+        val release = runBlocking { GitHubUpdateService(fetcher = rateLimitedFetcher()).fetchLatestRelease().getOrThrow() }
+        val resolved = checkNotNull(release)
+
+        // The update panel no longer shows GitHub release notes; the fallback used to smuggle a
+        // "Release notes: <url>" line into this field, and that link surfaced in the UI again.
+        assertTrue("fallback notes must stay blank: '${resolved.releaseNotes}'", resolved.releaseNotes.isBlank())
+        assertFalse(resolved.releaseNotes.contains("Release notes"))
+    }
+
+    @Test
     fun `healthy API is used without touching website routes`() {
         val fetcher = FakeFetcher(
             mapOf(

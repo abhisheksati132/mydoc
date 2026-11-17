@@ -110,6 +110,13 @@ fun SettingsScreen(
 
     var selectedCategoryName by rememberSaveable { mutableStateOf<String?>(null) }
     val selectedCategory = SettingsCategory.entries.firstOrNull { it.name == selectedCategoryName }
+    // Re-measure on every entry into Storage: thumbnails regenerated since the last visit
+    // were invisible to the one-shot read taken when Settings first opened.
+    LaunchedEffect(selectedCategory) {
+        if (selectedCategory == SettingsCategory.STORAGE) {
+            cacheSizeBytes = withContext(Dispatchers.IO) { settingsRepository.getCacheSizeBytes(context) }
+        }
+    }
     val categoryStates = rememberSaveableStateHolder()
     BackHandler(enabled = selectedCategory != null) { selectedCategoryName = null }
     val navigateBack = { if (selectedCategory != null) selectedCategoryName = null else onBackClick() }

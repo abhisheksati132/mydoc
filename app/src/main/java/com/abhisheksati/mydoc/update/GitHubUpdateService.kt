@@ -53,7 +53,7 @@ class GitHubUpdateService internal constructor(
         } ?: return null
         return buildRelease(
             tagName = web.tagName,
-            body = "Release notes: ${web.releaseUrl}",
+            body = "",
             publishedAt = "",
             apkAssets = web.assets,
             checksumUrls = web.checksumUrls,
