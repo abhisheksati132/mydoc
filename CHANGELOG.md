@@ -3,6 +3,11 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
+## [2.0.16] — 2026-11-17
+
+### Fixed
+- **Update checks survive GitHub API rate limits** — the unauthenticated API allows 60 requests per hour per network, and shared IPs (carrier NAT, households) exhaust it, which surfaced as "GitHub API returned HTTP 403". A 403/429 now falls back to GitHub's website routes (`releases/latest` and the release asset listing) with the same strict checksum and digest verification, and a fallback that also fails says to retry shortly instead of showing a raw status code.
+
 ## [2.0.15] — 2026-11-17
 
 ### Fixed
