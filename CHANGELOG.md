@@ -3,7 +3,7 @@
 All notable changes to MyDoc. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow the `versionName` in `app/build.gradle.kts`.
 
-## [Unreleased]
+## [2.0.17] — 2026-11-17
 
 ### Added
 - **Image → PDF review editor** — picked images no longer convert straight away. A full-screen editor stages them with a swipeable preview, a numbered thumbnail strip that reorders pages, per-page rotate and crop, and per-page filters (Original, Doc Auto, B&W Clean, Grayscale, Vivid Color, Shadow Free). Page size (A4, A5, Letter, Legal, Fit to image), orientation (Auto, Portrait, Landscape), margins, image quality (High, Balanced, Compact) and an extra compression switch carry through to the PDF. Adjustments are baked once, at Create PDF; untouched images pass through byte-identical.
