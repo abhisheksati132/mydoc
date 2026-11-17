@@ -97,8 +97,8 @@ it as well.
 - **Use**: The backdrop blur that gives the glass surfaces their optics.
 
 ### 10. Kotlin
-- **Projects**: [Kotlin](https://kotlinlang.org/) — `org.jetbrains.kotlin:kotlin-stdlib:2.3.21`,
-  `org.jetbrains.kotlinx:kotlinx-coroutines-*:1.11.0`, `org.jetbrains.kotlinx:kotlinx-serialization-*:1.8.1`
+- **Projects**: [Kotlin](https://kotlinlang.org/) — `org.jetbrains.kotlin:kotlin-stdlib:2.4.21`,
+  `org.jetbrains.kotlinx:kotlinx-coroutines-*:1.11.0`, `org.jetbrains.kotlinx:kotlinx-serialization-*:1.13.0`
 - **Copyright**: © JetBrains s.r.o. and Kotlin contributors
 - **License**: Apache License, Version 2.0, with the licensing exceptions described in the artifacts'
   own `LICENSE` files

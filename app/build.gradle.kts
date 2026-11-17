@@ -187,8 +187,8 @@ dependencies {
     implementation(libs.haze.glass)
     implementation(libs.haze.blur)
 
-    // Align serialization with Room 2.8's room-migration (kotlinx-serialization-json 1.8.1);
-    // lifecycle otherwise pins the app classpath to 1.7.3 and Room's schema parser crashes.
+    // Room 2.8's room-migration needs kotlinx-serialization-json 1.8.1 or newer; lifecycle
+    // otherwise pins the app classpath to 1.7.3 and Room's schema parser crashes.
     implementation(platform(libs.kotlinx.serialization.bom))
 
     implementation(libs.room.runtime)

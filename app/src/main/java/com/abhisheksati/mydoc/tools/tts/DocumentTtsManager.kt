@@ -23,8 +23,8 @@ internal fun ttsEngineDisplayName(defaultEnginePackage: String?, labelFor: (Stri
 
 /**
  * Per-screen handle onto the shared [TtsPlaybackController]. Keeping this type means the
- * viewers did not change, while audio itself survives the viewer and is owned by
- * [TtsPlaybackService].
+ * viewers did not change; [TtsPlaybackService] only keeps narration audible with the screen
+ * off or the app backgrounded while it lasts, and leaving the viewer stops it.
  */
 class DocumentTtsManager(context: Context) {
 

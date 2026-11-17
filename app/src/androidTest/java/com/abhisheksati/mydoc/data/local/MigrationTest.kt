@@ -147,6 +147,44 @@ class MigrationTest {
         }
     }
 
+    /** Highlights are new in 8: the upgrade must create them without touching existing rows. */
+    @Test
+    fun migrate7to8AddsHighlightsAndKeepsEveryRecord() {
+        val name = "migrate-7-8"
+        helper.createDatabase(name, 7).apply {
+            execSQL(
+                "INSERT INTO recent_documents (uri, displayName, sizeBytes, mimeType, " +
+                    "lastOpenedTimestamp, pageCount, lastPage) " +
+                    "VALUES ('content://seven', 'seven.pdf', 10, 'application/pdf', 5000, 0, 0)"
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(name, 8, true, MIGRATION_7_8)
+        try {
+            migrated.execSQL(
+                "INSERT INTO highlights (documentUri, pageIndex, text, note, createdTimestamp) " +
+                    "VALUES ('content://seven', 3, 'highlight', NULL, 6000)"
+            )
+            val highlights = migrated.query(
+                "SELECT documentUri, pageIndex FROM highlights"
+            )
+            assertTrue("the highlights table is missing after migration", highlights.moveToFirst())
+            assertEquals("content://seven", highlights.getString(0))
+            assertEquals(3, highlights.getInt(1))
+            highlights.close()
+
+            val recents = migrated.query(
+                "SELECT displayName FROM recent_documents WHERE uri = 'content://seven'"
+            )
+            assertTrue("the recent row did not survive the migration", recents.moveToFirst())
+            assertEquals("seven.pdf", recents.getString(0))
+            recents.close()
+        } finally {
+            migrated.close()
+        }
+    }
+
     /** The recents feed is capped like favourites and playback. */
     @Test
     fun recentsListIsBounded(): Unit = runBlocking {
