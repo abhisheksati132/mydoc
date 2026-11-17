@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.designsystem.components
 
+import com.abhisheksati.mydoc.util.SecureLog
 import android.content.Context
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -40,7 +41,7 @@ object AppMessages {
         )
         val delivered = queue.trySend(message).isSuccess
         if (!delivered) {
-            android.util.Log.w("AppMessages", "message dropped: ${message.text}")
+            SecureLog.warn("AppMessages", "message dropped", { message.text })
         }
     }
 

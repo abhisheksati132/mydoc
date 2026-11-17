@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc
 
+import com.abhisheksati.mydoc.util.SecureLog
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import android.app.Activity
@@ -743,7 +744,7 @@ class MainActivity : ComponentActivity() {
                     val privateAppDir = filesDir.parentFile?.canonicalFile?.toPath()
                     if (privateAppDir != null && canonicalFile != null &&
                         (canonicalFile.toPath().startsWith(privateAppDir) || canonicalFile.toPath() == privateAppDir)) {
-                        android.util.Log.w("MainActivity", "Blocked attempt to open an internal private file")
+                        SecureLog.warn("MainActivity", "Blocked attempt to open an internal private file")
                         showMessage(getString(R.string.main_blocked_private_file))
                         return
                     }

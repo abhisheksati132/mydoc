@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.rendering.engine.spreadsheet
 
+import com.abhisheksati.mydoc.util.SecureLog
 import android.util.Xml
 import com.abhisheksati.mydoc.rendering.engine.Ole2File
 import com.abhisheksati.mydoc.domain.model.DocumentLoadException
@@ -291,7 +292,7 @@ class SpreadsheetParser {
                         var n: Int
                         while (zis.read(buf).also { n = it } != -1) {
                             if (entryRead + n > maxOdsEntry) {
-                                android.util.Log.w("SpreadsheetParser", "ODS content.xml exceeds 25 MB limit")
+                                SecureLog.warn("SpreadsheetParser", "ODS content.xml exceeds 25 MB limit")
                                 contentXml = null
                                 break
                             }

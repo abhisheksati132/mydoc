@@ -129,6 +129,11 @@
     <string name="cleaner_subtitle">Review cache and duplicates</string>
     <string name="cleaner_scanning">Scanning Storage…</string>
     <string name="cleaner_moved_to_trash">Moved to Trash</string>
+    <string name="cleaner_removed_empty_folders">Empty folders removed</string>
+    <plurals name="cleaner_removed_empty_folders_summary">
+        <item quantity="one">%1$d empty folder deleted. No files were moved to Trash.</item>
+        <item quantity="other">%1$d empty folders deleted. No files were moved to Trash.</item>
+    </plurals>
     <string name="cleaner_empty_trash_hint">Empty Trash to actually free the space.</string>
     <string name="cleaner_reclaimable">Reclaimable space</string>
     <string name="cleaner_scan_limited">Scan stopped at the safety limit — some files were not checked.</string>

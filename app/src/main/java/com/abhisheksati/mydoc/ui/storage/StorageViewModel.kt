@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.ui.storage
 
+import com.abhisheksati.mydoc.util.SecureLog
 import com.abhisheksati.mydoc.R
 import android.app.Application
 import android.content.Context
@@ -183,7 +184,7 @@ class StorageViewModel(
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.w("StorageViewModel", "Failed to query MediaStore category", e)
+            SecureLog.warn("StorageViewModel", "Failed to query MediaStore category", e)
         }
 
         // 3. System & Other calculation
@@ -330,7 +331,7 @@ class StorageViewModel(
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.w("StorageViewModel", "Failed to query MediaStore category", e)
+            SecureLog.warn("StorageViewModel", "Failed to query MediaStore category", e)
         }
 
         return CategoryCountAndSize(bytes = totalBytes, count = count)

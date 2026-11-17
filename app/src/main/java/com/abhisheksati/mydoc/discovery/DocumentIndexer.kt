@@ -33,7 +33,13 @@ class DocumentIndexer(private val context: Context,private val store: DiscoveryS
                 if(directories>=MAX_DIRECTORIES) { limit=true;break }
                 val (dir,depth)=pending.removeFirst();directories++
                 if(depth>=MAX_DEPTH) { limit=true;continue }
-                for(child in SelectedDocument.children(context,dir)) {
+                // One directory can be arbitrarily wide. Cap the rows read from it: every entry
+                // spends either a file slot (MAX_FILES) or a directory slot (MAX_DIRECTORIES), so a
+                // directory that yields more rows than both budgets combined cannot be finished
+                // inside the selection limits anyway.
+                val page=SelectedDocument.children(context,dir,MAX_FILES+MAX_DIRECTORIES)
+                if(page.truncated) limit=true
+                for(child in page.entries) {
                     currentCoroutineContext().ensureActive()
                     if(files.size>=MAX_FILES) { limit=true;pending.clear();break }
                     if(child.isDirectory) {

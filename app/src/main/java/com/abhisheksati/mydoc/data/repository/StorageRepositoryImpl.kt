@@ -126,9 +126,9 @@ class StorageRepositoryImpl(
                 )
             }
         } catch (e: SecurityException) {
-            android.util.Log.w("StorageRepository", "Permission denied accessing primary storage volume", e)
+            SecureLog.warn("StorageRepository", "Permission denied accessing primary storage volume", e)
         } catch (e: Exception) {
-            android.util.Log.w("StorageRepository", "Error resolving primary storage volume", e)
+            SecureLog.warn("StorageRepository", "Error resolving primary storage volume", e)
         }
 
         // 2. Secondary SD Card / USB OTG
@@ -157,9 +157,9 @@ class StorageRepositoryImpl(
                 }
             }
         } catch (e: SecurityException) {
-            android.util.Log.w("StorageRepository", "Permission denied accessing external secondary volumes", e)
+            SecureLog.warn("StorageRepository", "Permission denied accessing external secondary volumes", e)
         } catch (e: Exception) {
-            android.util.Log.w("StorageRepository", "Error resolving secondary storage volumes", e)
+            SecureLog.warn("StorageRepository", "Error resolving secondary storage volumes", e)
         }
 
         volumes
@@ -283,8 +283,12 @@ class StorageRepositoryImpl(
     }
 
     private suspend fun deleteTree(entry: File): Boolean {
-        val coroutine = currentCoroutineContext()
         val path = entry.toPath()
+        // Rollback registers deletions for files that may never have been created: an archive
+        // can fail between registering the undo and writing the file. An absent tree is already
+        // undone; walking it would throw NoSuchFileException and report a false rollback failure.
+        if (Files.notExists(path, NOFOLLOW_LINKS)) return true
+        val coroutine = currentCoroutineContext()
         Files.walkFileTree(path, object : SimpleFileVisitor<Path>() {
             override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
                 coroutine.ensureActive()
@@ -303,12 +307,13 @@ class StorageRepositoryImpl(
     }
 
     /** Puts a REPLACE backup back in place after a failed extraction. */
-    private fun restoreReplacedFile(backup: File, original: File) {
-        if (!backup.exists()) return
+    private fun restoreReplacedFile(backup: File, original: File): Boolean {
+        if (!backup.exists()) return false
         if (!backup.renameTo(original)) {
             backup.copyTo(original, overwrite = true)
             backup.delete()
         }
+        return true
     }
 
     private suspend fun deleteTrashEntry(entry: File): Boolean {
@@ -993,7 +998,9 @@ class StorageRepositoryImpl(
                             }
                             rollbackActions += {
                                 runCatching { deleteTree(targetFile) }
-                                restoreReplacedFile(backup, targetFile)
+                                if (!restoreReplacedFile(backup, targetFile)) {
+                                    throw java.io.IOException("Could not restore ${targetFile.name} from its backup")
+                                }
                             }
                             commitActions += { backup.delete() }
                         }
@@ -1035,17 +1042,26 @@ class StorageRepositoryImpl(
         }
         if (extraction.isSuccess) {
             withContext(kotlinx.coroutines.NonCancellable) {
-                commitActions.forEach { runCatching { it() } }
+                commitActions.forEach { action ->
+                    runCatching { action() }.onFailure {
+                        SecureLog.warn("ZipExtraction", "Could not delete an extraction backup", it)
+                    }
+                }
             }
         } else {
             // Roll back first, then rethrow. Cancellation used to return before the rollback ran,
             // leaving the entries already written behind with no result to say so. Reversed so a
             // REPLACE's restored original lands after the file it replaced is removed.
-            for (rollback in rollbackActions.asReversed()) {
-                withContext(kotlinx.coroutines.NonCancellable) { runCatching { rollback() } }
+            val rollbackFailures = runZipRollbackActions(rollbackActions)
+            val failure = extraction.exceptionOrNull()
+            if (failure is CancellationException) {
+                rollbackFailures.forEach {
+                    SecureLog.warn("ZipExtraction", "Rollback step failed during cancellation", it)
+                }
+                throw failure
             }
-            if (extraction.exceptionOrNull() is CancellationException) {
-                throw extraction.exceptionOrNull() as CancellationException
+            if (failure != null && rollbackFailures.isNotEmpty()) {
+                return@withLock Result.failure(zipFailureWithRollbackDetails(failure, rollbackFailures))
             }
         }
         extraction
@@ -1151,10 +1167,10 @@ class StorageRepositoryImpl(
                 }
             }
         } catch (e: SecurityException) {
-            android.util.Log.w("StorageRepository", "Permission denied discovering recent files", e)
+            SecureLog.warn("StorageRepository", "Permission denied discovering recent files", e)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            android.util.Log.w("StorageRepository", "Error discovering recent files", e)
+            SecureLog.warn("StorageRepository", "Error discovering recent files", e)
         }
         items
     }
@@ -1180,9 +1196,9 @@ class StorageRepositoryImpl(
                     .take(200)
                     .forEach { results.add(StorageItem(it)) }
             } catch (e: SecurityException) {
-                android.util.Log.w("StorageRepository", "Permission denied walking directory for search", e)
+                SecureLog.warn("StorageRepository", "Permission denied walking directory for search", e)
             } catch (e: Exception) {
-                android.util.Log.w("StorageRepository", "Error walking directory for search", e)
+                SecureLog.warn("StorageRepository", "Error walking directory for search", e)
             }
         }
         results
@@ -1199,6 +1215,36 @@ class StorageRepositoryImpl(
             throw java.io.IOException("The Recycle Bin folder is unavailable.")
         }
         return trash
+    }
+
+    /**
+     * Runs undo actions newest-first and returns the failures instead of swallowing them.
+     * A failed REPLACE restore can leave the original only in its .bak_* file, so the caller
+     * has to be able to say recovery files may remain.
+     */
+    internal suspend fun runZipRollbackActions(actions: List<suspend () -> Unit>): List<Throwable> {
+        val failures = mutableListOf<Throwable>()
+        for (rollback in actions.asReversed()) {
+            withContext(kotlinx.coroutines.NonCancellable) {
+                try {
+                    rollback()
+                } catch (t: Throwable) {
+                    failures += t
+                }
+            }
+        }
+        return failures
+    }
+
+    internal fun zipFailureWithRollbackDetails(error: Throwable, rollbackFailures: List<Throwable>): Throwable {
+        if (rollbackFailures.isEmpty()) return error
+        rollbackFailures.forEach { SecureLog.warn("ZipExtraction", "Rollback step failed", it) }
+        return java.io.IOException(
+            "Extraction failed, and some of the folder could not be put back. " +
+                "Files named .bak_* or .tmp_* may remain next to the originals. " +
+                "(${error.message ?: error.javaClass.simpleName})",
+            error
+        )
     }
 
     private suspend fun scanFilesAwait(context: Context, paths: List<String>) {
@@ -1267,7 +1313,7 @@ class StorageRepositoryImpl(
                         canonical != null && canonical !in knownTrashPaths
                     }
                     if (orphans.isNotEmpty()) {
-                        android.util.Log.w(
+                        SecureLog.warn(
                             "TrashReconciliation",
                             "Keeping ${orphans.size} trash file(s) with no database record; " +
                                 "empty the Recycle Bin to reclaim them"
@@ -1275,7 +1321,7 @@ class StorageRepositoryImpl(
                     }
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
-                    android.util.Log.w("TrashReconciliation", "Orphan accounting failed", e)
+                    SecureLog.warn("TrashReconciliation", "Orphan accounting failed", e)
                 }
 
                 successfullyDeletedIds.size

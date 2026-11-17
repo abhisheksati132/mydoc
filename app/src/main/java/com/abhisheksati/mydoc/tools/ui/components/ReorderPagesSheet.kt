@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.tools.ui.components
 
+import com.abhisheksati.mydoc.util.SecureLog
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppProgressIndicator
 import kotlinx.coroutines.CancellationException
@@ -534,7 +535,7 @@ private suspend fun renderPageThumbnail(
             }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
-            android.util.Log.w("ReorderPages", "Thumbnail render failed for page $index", t)
+            SecureLog.warn("ReorderPages", "Thumbnail render failed for page $index", t)
             return
         }
         while (cache.size >= 48) {

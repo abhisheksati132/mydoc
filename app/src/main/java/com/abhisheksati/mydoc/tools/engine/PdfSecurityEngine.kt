@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.tools.engine
 
+import com.abhisheksati.mydoc.util.SecureLog
 import android.content.Context
 import com.abhisheksati.mydoc.tools.model.ToolOptions
 import com.abhisheksati.mydoc.tools.model.ToolProgress
@@ -254,36 +255,15 @@ class PdfSecurityEngine(private val context: Context) {
 
         var pdfBoxSucceeded = false
         try {
-            FileInputStream(file).use { fis ->
-                PDDocument.load(fis).use { doc ->
-                    if (doc.isEncrypted) {
-                        throw IllegalArgumentException("Cannot sanitize an encrypted document. Unlock the PDF before stripping metadata.")
-                    }
-                    doc.documentCatalog?.metadata = null
-                    // The structure tree is the tagged reading order and alternate text, not
-                    // metadata: clearing it stripped accessibility information from exactly the
-                    // documents that carry it. Only authoring properties are purged here.
-                    doc.documentInformation = PDDocumentInformation().apply {
-                        author = null
-                        title = null
-                        subject = null
-                        creator = null
-                        producer = null
-                        keywords = null
-                        creationDate = null
-                        modificationDate = null
-                    }
-                    FileOutputStream(intermediate).use { fos -> doc.save(fos) }
-                    pdfBoxSucceeded = true
-                }
-            }
+            stripAuthoredMetadata(file, intermediate)
+            pdfBoxSucceeded = true
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             if (e is IllegalArgumentException) {
                 try { if (intermediate.exists()) intermediate.delete() } catch (_: Exception) {}
                 throw e
             }
-            android.util.Log.w("PdfSecurityEngine", "PDFBox metadata clear failed: ${e.message}")
+            SecureLog.warn("PdfSecurityEngine", "PDFBox metadata clear failed", e)
             file.copyTo(intermediate, overwrite = true)
         }
 
@@ -324,6 +304,43 @@ class PdfSecurityEngine(private val context: Context) {
         } finally {
             srcDoc.destroy()
             try { if (intermediate.exists()) intermediate.delete() } catch (_: Exception) {}
+        }
+    }
+}
+
+/**
+ * PDFBox pass for metadata sanitization: clears the XMP packet and every authored /Info
+ * property. The structure tree and MarkInfo are tagged reading order and alternate text,
+ * not authoring metadata, and must survive — clearing them stripped accessibility
+ * information from exactly the documents that carry it.
+ */
+internal fun stripAuthoredMetadata(input: File, output: File) {
+    FileInputStream(input).use { fis ->
+        val doc = try {
+            PDDocument.load(fis)
+        } catch (e: com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException) {
+            // Load fails before the document exists for the isEncrypted check below, so a
+            // password-protected file has to be refused here, before the output is opened.
+            throw IllegalArgumentException(
+                "Cannot sanitize an encrypted document. Unlock the PDF before stripping metadata.", e
+            )
+        }
+        doc.use {
+            if (doc.isEncrypted) {
+                throw IllegalArgumentException("Cannot sanitize an encrypted document. Unlock the PDF before stripping metadata.")
+            }
+            doc.documentCatalog?.metadata = null
+            doc.documentInformation = PDDocumentInformation().apply {
+                author = null
+                title = null
+                subject = null
+                creator = null
+                producer = null
+                keywords = null
+                creationDate = null
+                modificationDate = null
+            }
+            FileOutputStream(output).use { fos -> doc.save(fos) }
         }
     }
 }

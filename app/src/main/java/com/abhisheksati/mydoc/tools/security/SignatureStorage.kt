@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
-import android.util.Log
+import com.abhisheksati.mydoc.util.SecureLog
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileInputStream
@@ -116,7 +116,7 @@ object SignatureStorage {
             }
             true
         } catch (e: Exception) {
-            Log.w(TAG, "Signature could not be saved", e)
+            SecureLog.warn(TAG, "Signature could not be saved", e)
             staging.delete()
             false
         }
@@ -169,7 +169,7 @@ object SignatureStorage {
             if (bitmap == null) DecodeResult.Failure("the decrypted bytes are not an image")
             else DecodeResult.Ok(bitmap)
         } catch (e: Exception) {
-            Log.w(TAG, "Stored signature could not be decrypted", e)
+            SecureLog.warn(TAG, "Stored signature could not be decrypted", e)
             DecodeResult.Failure("the stored signature is corrupt")
         }
     }

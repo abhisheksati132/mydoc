@@ -6,7 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.provider.OpenableColumns
-import android.util.Log
+import com.abhisheksati.mydoc.util.SecureLog
 import androidx.exifinterface.media.ExifInterface
 import com.abhisheksati.mydoc.data.local.AppDatabase
 import com.abhisheksati.mydoc.data.local.entity.MediaPlaybackEntity
@@ -169,7 +169,7 @@ class MediaRepositoryImpl(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.w("MediaRepository", "Error querying media", e)
+            SecureLog.warn("MediaRepository", "Error querying media", e)
         }
     }
 
@@ -248,7 +248,7 @@ class MediaRepositoryImpl(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.w("MediaRepository", "Error querying media", e)
+            SecureLog.warn("MediaRepository", "Error querying media", e)
         }
     }
 
@@ -310,7 +310,7 @@ class MediaRepositoryImpl(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.w("MediaRepository", "Error querying media", e)
+            SecureLog.warn("MediaRepository", "Error querying media", e)
         }
     }
 
@@ -334,7 +334,7 @@ class MediaRepositoryImpl(
                 }
             } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.w("MediaRepository", "Error querying media", e)
+            SecureLog.warn("MediaRepository", "Error querying media", e)
         }
         } else if (uri.scheme == "file") {
             val file = File(uri.path ?: "")

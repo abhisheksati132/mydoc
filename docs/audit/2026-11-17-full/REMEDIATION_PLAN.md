@@ -1,5 +1,7 @@
 # Remediation order
 
+> Historical plan written against the original audit snapshot (`6bf34ca6`, 2.0.14 / 204), before any fix landed. Every item below has since been implemented and gated; current status, evidence and remaining gaps are recorded in [AUDIT_REPORT.md](AUDIT_REPORT.md).
+
 Audit only: no production fix has been applied or pushed.
 
 1. **Contain destructive traversal.** Make move/trash/restore copy fallback, snapshots and deletion consistently avoid following directory links. Verify outside sentinel integrity and forced rename failure. Keep permanent-delete no-follow behavior.

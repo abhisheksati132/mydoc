@@ -1,5 +1,7 @@
 # Audit handoff
 
+> Historical record of the original source-review pass. It describes main at `6bf34ca6`, MyDoc 2.0.14 / 204, before any remediation. For current status see [AUDIT_REPORT.md](AUDIT_REPORT.md) (consolidated, updated after the fixes) and [../2026-11-17-latest-fix-verification.md](../2026-11-17-latest-fix-verification.md) (external verification of the fixed tree).
+
 Target: main at `6bf34ca6feee75f4fcfb9f1fe5afc189f1abec38`, MyDoc 2.0.14 / 204. Source-review pass finished; runtime verification remains incomplete. No production changes, commits, pushes, branches or releases were made.
 
 ## Coverage

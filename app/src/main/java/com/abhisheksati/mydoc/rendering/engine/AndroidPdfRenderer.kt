@@ -1,4 +1,5 @@
 package com.abhisheksati.mydoc.rendering.engine
+import com.abhisheksati.mydoc.util.SecureLog
 import kotlinx.coroutines.CancellationException
 
 import android.content.Context
@@ -252,7 +253,7 @@ class AndroidPdfRenderer(
             stripper.getText(doc)?.trim() ?: ""
         } catch (e: Throwable) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            android.util.Log.w("AndroidPdfRenderer", "Page $pageIndex text layer unreadable", e)
+            SecureLog.warn("AndroidPdfRenderer", "Page $pageIndex text layer unreadable", e)
             null
         }
     }
@@ -263,7 +264,7 @@ class AndroidPdfRenderer(
             PDFTextStripper().getText(doc)?.trim() ?: ""
         } catch (e: Throwable) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            android.util.Log.w("AndroidPdfRenderer", "Document text unreadable", e)
+            SecureLog.warn("AndroidPdfRenderer", "Document text unreadable", e)
             null
         }
     }
@@ -286,7 +287,7 @@ class AndroidPdfRenderer(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (t: Throwable) {
-                    android.util.Log.w("AndroidPdfRenderer", "Search skipped page $p", t)
+                    SecureLog.warn("AndroidPdfRenderer", "Search skipped page $p", t)
                     false
                 }
             }

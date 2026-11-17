@@ -81,6 +81,8 @@ fun StorageCleanerScreen(
     var showConfirm by remember { mutableStateOf(false) }
     var cleanedBytes by remember { mutableStateOf<Long?>(null) }
     var cleanedCount by remember { mutableIntStateOf(0) }
+    var cleanedDirs by remember { mutableIntStateOf(0) }
+    var cleanedFoldersOnly by remember { mutableStateOf(false) }
 
     // Nothing is selected by default: the user has to opt in to every category before
     // anything leaves its original folder, even for a reversible move to Trash.
@@ -105,6 +107,8 @@ fun StorageCleanerScreen(
         currentScannedName = ""
         cleanedCount = 0
         cleanedBytes = null
+        cleanedDirs = 0
+        cleanedFoldersOnly = false
         cleanTempFiles = false
         cleanApks = false
         cleanDuplicates = false
@@ -252,18 +256,29 @@ fun StorageCleanerScreen(
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = stringResource(R.string.cleaner_moved_to_trash),
+                            text = stringResource(
+                                if (cleanedFoldersOnly) R.string.cleaner_removed_empty_folders
+                                else R.string.cleaner_moved_to_trash
+                            ),
                             style = typography.heading,
                             color = colors.textPrimary
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = stringResource(
-                                R.string.cleaner_moved_summary,
-                                cleanedCount,
-                                StorageVolume.formatBytes(cleanedBytes ?: 0L),
-                                stringResource(R.string.cleaner_empty_trash_hint)
-                            ),
+                            text = if (cleanedFoldersOnly) {
+                                pluralStringResource(
+                                    R.plurals.cleaner_removed_empty_folders_summary,
+                                    cleanedDirs,
+                                    cleanedDirs
+                                )
+                            } else {
+                                stringResource(
+                                    R.string.cleaner_moved_summary,
+                                    cleanedCount,
+                                    StorageVolume.formatBytes(cleanedBytes ?: 0L),
+                                    stringResource(R.string.cleaner_empty_trash_hint)
+                                )
+                            },
                             style = typography.body,
                             color = colors.textSecondary,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -767,6 +782,10 @@ fun StorageCleanerScreen(
                         val deletedDirs = cleanerManager.deleteEmptyDirectories(selectedEmptyDirs, rootDir)
                         val actualMovedCount = if (moved.isNotEmpty()) moved.size else partialCleanedCount
                         cleanedCount = actualMovedCount
+                        cleanedDirs = deletedDirs
+                        // Only empty folders going away is a success, but nothing moved to Trash:
+                        // "Moved to Trash / 0 items (0 B)" claimed the wrong thing happened.
+                        cleanedFoldersOnly = actualMovedCount == 0 && deletedDirs > 0
                         // A zero-byte success screen claimed the cleanup worked even when every
                         // move failed. The completion state only appears if something moved or
                         // an empty folder went away; a total failure stays on the results list

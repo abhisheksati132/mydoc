@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.rendering.engine
 
+import com.abhisheksati.mydoc.util.SecureLog
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -151,7 +152,7 @@ class MuPdfRenderer(
                 }
             }.getOrElse {
                 // Not cached: a fallback size must not outlive the failure that produced it.
-                android.util.Log.w("MuPdfRenderer", "Page $pageIndex bounds unreadable; using A4", it)
+                SecureLog.warn("MuPdfRenderer", "Page $pageIndex bounds unreadable; using A4", it)
                 return@withLock Pair(595f, 842f)
             }
             pageSizeCache[pageIndex] = size
@@ -284,7 +285,7 @@ class MuPdfRenderer(
                             device.destroy()
                         }
                     } catch (t: Throwable) {
-                        android.util.Log.w("MuPdfRenderer", "clipped tile render failed", t)
+                        SecureLog.warn("MuPdfRenderer", "clipped tile render failed", t)
                         if (!tile.isRecycled) tile.recycle()
                         throw t
                     }
@@ -354,7 +355,7 @@ class MuPdfRenderer(
             try {
                 doc.countPages()
             } catch (t: Throwable) {
-                android.util.Log.w("MuPdfRenderer", "could not count pages for search", t)
+                SecureLog.warn("MuPdfRenderer", "could not count pages for search", t)
                 0
             }
         }
@@ -373,7 +374,7 @@ class MuPdfRenderer(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (t: Throwable) {
-                    android.util.Log.w("MuPdfRenderer", "Search skipped page $p", t)
+                    SecureLog.warn("MuPdfRenderer", "Search skipped page $p", t)
                     null
                 }
             }
@@ -436,7 +437,7 @@ class MuPdfRenderer(
             withPage(doc, pageIndex) { page -> withStructuredText(page) { st -> dumpText(st) } }
         }.getOrElse {
             if (it is CancellationException) throw it
-            android.util.Log.w("MuPdfRenderer", "Page $pageIndex text layer unreadable", it)
+            SecureLog.warn("MuPdfRenderer", "Page $pageIndex text layer unreadable", it)
             null
         }
     }
@@ -460,7 +461,7 @@ class MuPdfRenderer(
         val doc = document ?: return@withLock null
         val total = runCatching { doc.countPages() }.getOrElse {
             if (it is CancellationException) throw it
-            android.util.Log.w("MuPdfRenderer", "Page count unreadable", it)
+            SecureLog.warn("MuPdfRenderer", "Page count unreadable", it)
             return@withLock null
         }
         val sb = StringBuilder()
@@ -470,7 +471,7 @@ class MuPdfRenderer(
                 withPage(doc, p) { page -> withStructuredText(page) { st -> dumpText(st) } }
             }.getOrElse {
                 if (it is CancellationException) throw it
-                android.util.Log.w("MuPdfRenderer", "Page $p text layer unreadable", it)
+                SecureLog.warn("MuPdfRenderer", "Page $p text layer unreadable", it)
                 null
             }
             if (pageText == null) failedPages++ else sb.append(pageText)
@@ -498,7 +499,7 @@ class MuPdfRenderer(
             }
         }.getOrElse {
             if (it is CancellationException) throw it
-            android.util.Log.w("MuPdfRenderer", "Word selection failed on page $pageIndex", it)
+            SecureLog.warn("MuPdfRenderer", "Word selection failed on page $pageIndex", it)
             null
         }
     }
@@ -523,7 +524,7 @@ class MuPdfRenderer(
             }
         }.getOrElse {
             if (it is CancellationException) throw it
-            android.util.Log.w("MuPdfRenderer", "Range selection failed on page $pageIndex", it)
+            SecureLog.warn("MuPdfRenderer", "Range selection failed on page $pageIndex", it)
             null
         }
     }

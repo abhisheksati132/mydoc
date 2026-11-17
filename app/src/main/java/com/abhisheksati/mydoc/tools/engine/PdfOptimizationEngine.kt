@@ -1,5 +1,6 @@
 package com.abhisheksati.mydoc.tools.engine
 
+import com.abhisheksati.mydoc.util.SecureLog
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -72,7 +73,7 @@ class PdfOptimizationEngine(private val context: Context) {
                             // The stream dictionary already gives the dimensions, so an image too large
                             // to hold is skipped before it is decoded rather than after it dies.
                             if (w.toLong() * h.toLong() > MAX_DECODABLE_PIXELS) {
-                                android.util.Log.w(
+                                SecureLog.warn(
                                     "PdfOptimize",
                                     "skipping a ${w}x$h image: too large to decode within the budget"
                                 )
@@ -85,7 +86,7 @@ class PdfOptimizationEngine(private val context: Context) {
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (t: Throwable) {
-                                android.util.Log.w("PdfOptimize", "could not decode a ${w}x$h image", t)
+                                SecureLog.warn("PdfOptimize", "could not decode a ${w}x$h image", t)
                                 totalImagesSkipped++
                                 continue
                             }
@@ -115,7 +116,7 @@ class PdfOptimizationEngine(private val context: Context) {
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (t: Throwable) {
-                                android.util.Log.w("PdfOptimize", "could not recompress a ${w}x$h image", t)
+                                SecureLog.warn("PdfOptimize", "could not recompress a ${w}x$h image", t)
                                 totalImagesSkipped++
                             } finally {
                                 // PDImageXObject.getImage() decodes afresh on every call, so this bitmap
@@ -128,7 +129,7 @@ class PdfOptimizationEngine(private val context: Context) {
                     }
 
                     if (totalImagesSkipped > 0) {
-                        android.util.Log.w(
+                        SecureLog.warn(
                             "PdfOptimize",
                             "left $totalImagesSkipped embedded image(s) untouched: too large or undecodable"
                         )
@@ -143,7 +144,7 @@ class PdfOptimizationEngine(private val context: Context) {
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            android.util.Log.w("PdfOptimize", "image recompression strategy failed", e)
+            SecureLog.warn("PdfOptimize", "image recompression strategy failed", e)
             pdfBoxSucceeded = false
             if (boxOutFile.exists()) boxOutFile.delete()
         }

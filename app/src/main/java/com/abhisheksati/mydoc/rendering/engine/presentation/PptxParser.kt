@@ -1,6 +1,6 @@
 package com.abhisheksati.mydoc.rendering.engine.presentation
 
-import android.util.Log
+import com.abhisheksati.mydoc.util.SecureLog
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.isSpecified
@@ -67,7 +67,7 @@ class PptxParser {
         val bytes = try {
             readBoundedInputStream(inputStream, 50 * 1024 * 1024)
         } catch (e: Exception) {
-            android.util.Log.e("PptxParser", "Error reading presentation", e)
+            SecureLog.error("PptxParser", "Error reading presentation", e)
             return@withContext emptyPresentation("File too large or unreadable: ${e.message}")
         }
         com.abhisheksati.mydoc.rendering.engine.rejectEncryptedOfficeSource(bytes)
@@ -159,7 +159,7 @@ class PptxParser {
                 }
             }
         } catch (e: SecurityException) {
-            android.util.Log.w("PptxParser", "Rejected ODP: ${e.message}")
+            SecureLog.warn("PptxParser", "Rejected ODP", e)
             return PptxPresentation(emptyList())
         } catch (_: Throwable) {
             return PptxPresentation(emptyList())
@@ -474,7 +474,7 @@ class PptxParser {
             }
         } catch (e: Throwable) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            android.util.Log.w("PptxParser", "Presentation markup stopped parsing early", e)
+            SecureLog.warn("PptxParser", "Presentation markup stopped parsing early", e)
             val stoppedAspect = if (pageHeightCm > 0f) pageWidthCm / pageHeightCm else 16f / 9f
             return PptxPresentation(
                 slides = slides,
@@ -584,11 +584,11 @@ class PptxParser {
                 }
             }
         } catch (e: SecurityException) {
-            android.util.Log.w("PptxParser", "Rejected PPTX: ${e.message}")
+            SecureLog.warn("PptxParser", "Rejected PPTX", e)
             stoppedEarly = "This file exceeded the limits MyDoc applies, so only part of it was read."
         } catch (e: Throwable) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            android.util.Log.w("PptxParser", "PPTX package stopped reading early", e)
+            SecureLog.warn("PptxParser", "PPTX package stopped reading early", e)
             stoppedEarly = "Only part of this package could be read, so some slides may be missing."
         }
 
@@ -925,7 +925,7 @@ class PptxParser {
                 }
                 slidesList.add(slide)
             } catch (slideErr: Throwable) {
-                android.util.Log.w("PptxParser", "Failed to parse slide $key, applying resilient extractor", slideErr)
+                SecureLog.warn("PptxParser", "Failed to parse a slide, applying resilient extractor", slideErr)
                 val fallbackSlide = parseResilientSlideXml(
                     slideBytes = slideBytes,
                     slideNum = slideNum,
@@ -1233,7 +1233,7 @@ class PptxParser {
                 eventType = parser.next()
             }
         } catch (e: Exception) {
-            Log.w("PptxParser", "Non-fatal error parsing presentation element", e)
+            SecureLog.warn("PptxParser", "Non-fatal error parsing presentation element", e)
         }
 
         // Fallback standard colors if missing in theme
@@ -1408,7 +1408,7 @@ class PptxParser {
                 eventType = parser.next()
             }
         } catch (e: Exception) {
-            Log.w("PptxParser", "Non-fatal error parsing presentation element", e)
+            SecureLog.warn("PptxParser", "Non-fatal error parsing presentation element", e)
         }
 
         return SlideLayoutInfo(placeholders, backgroundFill, backgroundShapes)
@@ -1448,7 +1448,7 @@ class PptxParser {
                 eventType = parser.next()
             }
         } catch (e: Exception) {
-            Log.w("PptxParser", "Non-fatal error parsing presentation element", e)
+            SecureLog.warn("PptxParser", "Non-fatal error parsing presentation element", e)
         }
 
         return Pair(Pair(w, h), relIds)
@@ -2142,7 +2142,7 @@ class PptxParser {
                 eventType = parser.next()
             }
         } catch (e: Exception) {
-            Log.e("PptxParser", "Fatal error parsing slide", e)
+            SecureLog.error("PptxParser", "Fatal error parsing slide", e)
             throw e
         }
 
