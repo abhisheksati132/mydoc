@@ -143,7 +143,10 @@ fun FilesPaneScreen(
     onShowTransfers: () -> Unit = {},
     onOpenSavedSearches: () -> Unit = {},
     showWorkspaceTools: Boolean = false,
-    workspaceMenu: @Composable androidx.compose.foundation.layout.ColumnScope.(() -> Unit) -> Unit = {}
+    workspaceMenu: @Composable androidx.compose.foundation.layout.ColumnScope.(() -> Unit) -> Unit = {},
+    onPreviewFile: ((StorageItem) -> Unit)? = null,
+    previewActionsPath: String? = null,
+    onPreviewActionsConsumed: () -> Unit = {}
 ) {
 
     val chromeInset = LocalFloatingChromeInset.current
@@ -374,6 +377,12 @@ fun FilesPaneScreen(
         }
     }
 
+    LaunchedEffect(previewActionsPath, isActive) {
+        if (isActive && previewActionsPath != null) {
+            actionTarget = StorageItem(File(previewActionsPath))
+            onPreviewActionsConsumed()
+        }
+    }
     val quickPreviewItem = quickPreviewPath?.let { path -> uiState.items.firstOrNull { it.path == path } }
     LaunchedEffect(quickPreviewPath, quickPreviewItem, uiState.isLoading, insideBrowse, uiState.isSelectionMode) {
         if (quickPreviewPath != null && !uiState.isLoading &&
@@ -643,7 +652,10 @@ fun FilesPaneScreen(
         onRequestRename = { renameTarget = it },
         onOpenFile = { file -> if (file.extension.equals("zip", true)) archiveTarget = file else onOpenFile(file, null) },
         onOpenInTools = onOpenInTools,
-        onRequestPreview = { quickPreviewPath = it.path }
+        onRequestPreview = { item ->
+            if (onPreviewFile != null && !item.isDirectory && item.fileType != StorageFileType.ARCHIVE) onPreviewFile(item)
+            else quickPreviewPath = item.path
+        }
     )
 
     if (isActive && insideBrowse && !uiState.isSelectionMode) quickPreviewItem?.let { item ->

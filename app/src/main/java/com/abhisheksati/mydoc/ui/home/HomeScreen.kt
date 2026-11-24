@@ -110,6 +110,9 @@ fun HomeScreen(
     onShareDocument: (DocumentFile) -> Unit,
     updateManager: UpdateManager? = null,
     quickScanRequested: Boolean = false,
+    onPreviewFile: ((com.abhisheksati.mydoc.domain.model.StorageItem) -> Unit)? = null,
+    previewActionsPath: String? = null,
+    onPreviewActionsConsumed: () -> Unit = {},
     onQuickScanShown: () -> Unit = {}
 ) {
 
@@ -254,6 +257,9 @@ fun HomeScreen(
                         }
                         HomeTab.LIBRARY -> {
                             FilesScreen(
+                                onPreviewFile = onPreviewFile,
+                                previewActionsPath = previewActionsPath,
+                                onPreviewActionsConsumed = onPreviewActionsConsumed,
                                 viewModel = fileManagerViewModel,
                                 homeViewModel = viewModel,
                                 storageViewModel = storageViewModel,

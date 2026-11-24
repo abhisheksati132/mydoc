@@ -55,7 +55,10 @@ fun FilesScreen(
     onConvertSelected: ((List<File>) -> Unit)? = null,
     hazeState: HazeState? = null,
     glassMotion: GlassMotionState? = null,
-    onPageVisibilityChange: (Boolean) -> Unit = {}
+    onPageVisibilityChange: (Boolean) -> Unit = {},
+    onPreviewFile: ((com.abhisheksati.mydoc.domain.model.StorageItem) -> Unit)? = null,
+    previewActionsPath: String? = null,
+    onPreviewActionsConsumed: () -> Unit = {}
 ) {
     val app = LocalContext.current.applicationContext as MyDocApp
     val workspace: ExplorerWorkspaceViewModel = viewModel(key = "explorer-workspace", factory = remember(viewModel) {
@@ -139,6 +142,9 @@ fun FilesScreen(
                                 onConvertSelected = onConvertSelected,
                                 onOpenInTools = onOpenInTools, hazeState = hazeState, glassMotion = glassMotion,
                                 onPageVisibilityChange = onPageVisibilityChange,
+                                onPreviewFile = onPreviewFile,
+                                previewActionsPath = previewActionsPath,
+                                onPreviewActionsConsumed = onPreviewActionsConsumed,
                                 workspaceInsets = tabs.size > 1, onShowTransfers = { showTransfers = true },
                                 onOpenSavedSearches = { showSavedSearches = true },
                                 showWorkspaceTools = tabs.size > 1,

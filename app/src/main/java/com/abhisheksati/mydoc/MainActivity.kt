@@ -82,6 +82,7 @@ class MainActivity : ComponentActivity() {
         data object DesignSystemPreview : ActiveScreen
         data object Settings : ActiveScreen
         data object Search : ActiveScreen
+        data class Preview(val item: com.abhisheksati.mydoc.domain.model.StorageItem) : ActiveScreen
         data class Document(val document: DocumentFile) : ActiveScreen
         data class Photo(val item: com.abhisheksati.mydoc.domain.model.MediaItem, val allPhotos: List<com.abhisheksati.mydoc.domain.model.MediaItem>) : ActiveScreen
         data class Video(val item: com.abhisheksati.mydoc.domain.model.MediaItem) : ActiveScreen
@@ -128,6 +129,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private lateinit var updateManager: UpdateManager
+    private var currentPreview by mutableStateOf<com.abhisheksati.mydoc.domain.model.StorageItem?>(null)
+    private var previewActionsPath by mutableStateOf<String?>(null)
     private var currentDocument by mutableStateOf<DocumentFile?>(null)
     private var docSiblings by mutableStateOf<List<DocumentFile>>(emptyList())
     private var currentPhoto by mutableStateOf<Pair<com.abhisheksati.mydoc.domain.model.MediaItem, List<com.abhisheksati.mydoc.domain.model.MediaItem>>?>(null)
@@ -168,6 +171,8 @@ class MainActivity : ComponentActivity() {
         // uiMode is not in configChanges, so a dark-mode switch recreates the activity; without
         // this, Settings/Search were dumped back to Home. The lock flag stays fail-closed.
         if (savedInstanceState != null) {
+            currentPreview = savedInstanceState.getString("preview_path")?.let { com.abhisheksati.mydoc.domain.model.StorageItem(File(it)) }
+            previewActionsPath = savedInstanceState.getString("preview_actions_path")
             isSettingsOpen = savedInstanceState.getBoolean("settings_open")
             isSpotlightSearchOpen = savedInstanceState.getBoolean("spotlight_open")
             isDesignSystemPreviewOpen = savedInstanceState.getBoolean("design_preview_open")
@@ -315,6 +320,7 @@ class MainActivity : ComponentActivity() {
                     video != null -> ActiveScreen.Video(video)
                     audio != null -> ActiveScreen.Audio(audio)
                     doc != null -> ActiveScreen.Document(doc)
+                    currentPreview != null -> ActiveScreen.Preview(currentPreview!!)
                     else -> ActiveScreen.Home
                 }
 
@@ -330,6 +336,7 @@ class MainActivity : ComponentActivity() {
                         currentVideo != null -> currentVideo = null
                         currentAudio != null -> currentAudio = null
                         currentDocument != null -> currentDocument = null
+                        currentPreview != null -> currentPreview = null
                     }
                 }
 
@@ -410,9 +417,9 @@ class MainActivity : ComponentActivity() {
                                     when {
                                         reducedMotion -> androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None
                                         // Home list -> document viewer (and back): the hero carries it.
-                                        targetIsDocument && initialState is ActiveScreen.Home ->
+                                        targetIsDocument && (initialState is ActiveScreen.Home || initialState is ActiveScreen.Preview) ->
                                             AppMotion.heroEnter() togetherWith AppMotion.heroExit()
-                                        initialIsDocument && targetState is ActiveScreen.Home ->
+                                        initialIsDocument && (targetState is ActiveScreen.Home || targetState is ActiveScreen.Preview) ->
                                             AppMotion.heroEnter() togetherWith AppMotion.heroExit()
                                         // Opening a document / photo / video / audio.
                                         targetIsDetail -> AppMotion.detailEnter() togetherWith AppMotion.detailExit()
@@ -511,6 +518,21 @@ class MainActivity : ComponentActivity() {
                                                 onBackClick = { currentAudio = null }
                                             )
                                         }
+                                        is ActiveScreen.Preview -> {
+                                            screenState.SaveableStateProvider("preview:${screen.item.path}") {
+                                                com.abhisheksati.mydoc.ui.files.FileQuickPreviewSheet(
+                                                    item = screen.item,
+                                                    asScreen = true,
+                                                    onDismiss = { currentPreview = null },
+                                                    onOpen = { handleOpenFile(screen.item.file) },
+                                                    onOpenPage = if (screen.item.extension == "pdf") ({ page -> handleOpenFile(screen.item.file, initialPage = page) }) else null,
+                                                    onMore = {
+                                                        previewActionsPath = screen.item.path
+                                                        currentPreview = null
+                                                    },
+                                                    onShare = { com.abhisheksati.mydoc.ui.files.shareFiles(this@MainActivity, listOf(screen.item.file)) })
+                                            }
+                                        }
                                         is ActiveScreen.Document -> {
                                             val activeDoc = screen.document
                                             Box(modifier = Modifier.fillMaxSize()) {
@@ -526,7 +548,7 @@ class MainActivity : ComponentActivity() {
                                                     onSelectTool = { tool ->
                                                         toolsViewModel.selectTool(tool, preselectedUri = Uri.parse(activeDoc.uri))
                                                     },
-                                                    modifier = Modifier.documentHero(documentHeroKey(activeDoc.uri))
+                                                    modifier = Modifier
                                                 )
 
                                                 if (selectedTool != null) {
@@ -557,8 +579,11 @@ class MainActivity : ComponentActivity() {
                                         ActiveScreen.Home -> {
                                             screenState.SaveableStateProvider("home") {
                                                 HomeScreen(
+                                                    onPreviewFile = ::showFilePreview,
+                                                    previewActionsPath = previewActionsPath,
+                                                    onPreviewActionsConsumed = { previewActionsPath = null },
                                                     quickScanRequested = quickScanRequested,
-                                                    onQuickScanShown = { quickScanRequested = false },
+                                                    onQuickScanShown = { currentPreview = null; quickScanRequested = false },
                                                     viewModel = homeViewModel,
                                                     toolsViewModel = toolsViewModel,
                                                     fileManagerViewModel = fileManagerViewModel,
@@ -593,6 +618,8 @@ class MainActivity : ComponentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString("pending_install_uri", pendingInstallUri?.toString())
+        outState.putString("preview_path", currentPreview?.path)
+        outState.putString("preview_actions_path", previewActionsPath)
         outState.putBoolean("settings_open", isSettingsOpen)
         outState.putBoolean("spotlight_open", isSpotlightSearchOpen)
         outState.putBoolean("design_preview_open", isDesignSystemPreviewOpen)
@@ -761,9 +788,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun handleOpenFile(file: File, siblingFiles: List<File>? = null) {
+    internal fun showFilePreview(item: com.abhisheksati.mydoc.domain.model.StorageItem) {
+        currentPreview = item
+    }
+
+    private fun handleOpenFile(file: File, siblingFiles: List<File>? = null, initialPage: Int? = null) {
         val uri = Uri.fromFile(file)
-        openUriOrFile(uri = uri, fileName = file.name, file = file, siblingFiles = siblingFiles)
+        openUriOrFile(uri = uri, fileName = file.name, file = file, siblingFiles = siblingFiles, initialPage = initialPage)
     }
 
     /** Widget row tap: open the named document if it is still a recent, falling back to our copy. */
@@ -842,7 +873,8 @@ class MainActivity : ComponentActivity() {
         mimeType: String? = null,
         fileName: String? = null,
         file: File? = null,
-        siblingFiles: List<File>? = null
+        siblingFiles: List<File>? = null,
+        initialPage: Int? = null
     ) {
         val effectiveName = fileName ?: runCatching {
             if (uri.scheme == "content") {
@@ -1005,7 +1037,12 @@ class MainActivity : ComponentActivity() {
                         val app = application as MyDocApp
                         val result = app.documentRepository.registerOpenedDocument(uri)
                         result.onSuccess { doc ->
-                            currentDocument = doc
+                            if (initialPage != null) {
+                                val view = app.documentRepository.getViewState(doc.uri)
+                                    ?: com.abhisheksati.mydoc.domain.model.ViewState(doc.uri)
+                                app.documentRepository.saveViewState(view.copy(lastPage = initialPage.coerceAtLeast(0)))
+                            }
+                            currentDocument = if (initialPage != null) doc.copy(lastPage = initialPage.coerceAtLeast(0)) else doc
                         }.onFailure { e ->
                             if (file != null) {
                                 val opened = withContext(kotlinx.coroutines.Dispatchers.IO) {

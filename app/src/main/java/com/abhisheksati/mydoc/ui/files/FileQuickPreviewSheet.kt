@@ -36,6 +36,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.abhisheksati.mydoc.designsystem.animation.documentHero
+import com.abhisheksati.mydoc.designsystem.animation.documentHeroKey
 import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
@@ -51,7 +53,9 @@ internal fun FileQuickPreviewSheet(
     onDismiss: () -> Unit,
     onOpen: () -> Unit,
     onMore: () -> Unit,
-    onShare: (() -> Unit)? = null
+    onShare: (() -> Unit)? = null,
+    onOpenPage: ((Int) -> Unit)? = null,
+    asScreen: Boolean = false
 ) {
     val scheme = MaterialTheme.colorScheme
     val previewDescription = stringResource(R.string.quick_preview_thumbnail)
@@ -63,12 +67,8 @@ internal fun FileQuickPreviewSheet(
     val previewHeight by animateDpAsState(targetPreviewHeight,
         animationSpec = if (LocalReducedMotion.current) snap() else AppMotion.snappy(), label = "previewExpansion")
     var previewPage by rememberSaveable(thumbnailKey(item.path, item.sizeBytes, item.lastModified)) { mutableIntStateOf(0) }
-    AppModalSheet(
-        onDismissRequest = onDismiss,
-        containerColor = AppTheme.colors.surface,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ) {
-        Column(Modifier.fillMaxWidth().fillMaxHeight(0.9f)) {
+    val previewContent: @Composable () -> Unit = {
+        Column(Modifier.fillMaxWidth().fillMaxHeight(if (asScreen) 1f else 0.9f)) {
             Row(
                 Modifier.fillMaxWidth().padding(start = AppSpacing.screenPadding, end = AppSpacing.small),
                 verticalAlignment = Alignment.CenterVertically
@@ -95,7 +95,9 @@ internal fun FileQuickPreviewSheet(
             ) {
                 item(key = "thumbnail") {
                     Box(
-                        Modifier.fillMaxWidth().height(previewHeight).clip(AppRadius.insetShape)
+                        Modifier.fillMaxWidth().height(previewHeight)
+                            .then(if (asScreen) Modifier.documentHero(documentHeroKey(android.net.Uri.fromFile(item.file).toString())) else Modifier)
+                            .clip(AppRadius.insetShape)
                             .background(AppTheme.colors.surfaceMuted)
                             .then(if (item.extension == "pdf") Modifier else Modifier.clearAndSetSemantics { contentDescription = previewDescription }),
                         contentAlignment = Alignment.Center
@@ -146,7 +148,7 @@ internal fun FileQuickPreviewSheet(
                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.small),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(onClick = onOpen, modifier = Modifier.weight(1f), shape = AppRadius.pillShape) {
+                Button(onClick = { if (onOpenPage != null) onOpenPage(previewPage) else onOpen() }, modifier = Modifier.weight(1f), shape = AppRadius.pillShape) {
                     Text(stringResource(R.string.action_open))
                     Spacer(Modifier.width(AppSpacing.small))
                     Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -158,6 +160,12 @@ internal fun FileQuickPreviewSheet(
                 }
             }
         }
+    }
+    if (asScreen) {
+        Surface(Modifier.fillMaxSize().statusBarsPadding(), color = AppTheme.colors.background) { previewContent() }
+    } else {
+        AppModalSheet(onDismissRequest = onDismiss, containerColor = AppTheme.colors.surface,
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) { previewContent() }
     }
 }
 

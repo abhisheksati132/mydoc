@@ -1,5 +1,7 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
+import com.abhisheksati.mydoc.designsystem.animation.documentHero
+import com.abhisheksati.mydoc.designsystem.animation.documentHeroKey
 import android.app.Activity
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -273,7 +275,7 @@ fun ViewerScaffold(
             .background(backgroundColor)
     ) {
         // Capture the page alone, so controls never refract themselves.
-        Box(Modifier.matchParentSize().then(if (liveReaderGlass) Modifier.hazeSource(readerHaze) else Modifier),
+        Box(Modifier.matchParentSize().documentHero(documentHeroKey(document.uri)).then(if (liveReaderGlass) Modifier.hazeSource(readerHaze) else Modifier),
             content = content)
 
         // Top Bar
