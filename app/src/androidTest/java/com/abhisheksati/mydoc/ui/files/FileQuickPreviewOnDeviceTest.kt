@@ -41,6 +41,7 @@ class FileQuickPreviewOnDeviceTest {
         var opened = false
         compose.setContent { AppDesignSystemTheme { FileQuickPreviewSheet(item, {}, { opened = true }, {}) } }
         compose.onNodeWithText(item.name).assertExists()
+        compose.onNodeWithTag("quick-preview-content").performScrollToNode(hasText(item.path))
         compose.onNodeWithText(item.path).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Open").performClick()
         assertTrue(opened)
@@ -62,6 +63,99 @@ class FileQuickPreviewOnDeviceTest {
         assertTrue(closed)
     }
 
+    @Test fun pdfPagesCanBeBrowsedWithoutOpeningTheReader() {
+        val file = pdfFixture()
+        var opened = false
+        try {
+            compose.setContent { AppDesignSystemTheme { FileQuickPreviewSheet(StorageItem(file), {}, { opened = true }, {}) } }
+            compose.waitUntil(10_000) { compose.onAllNodesWithText("Page 1 of 2").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithContentDescription("Next preview page").performScrollTo().performClick()
+            compose.waitUntil(10_000) { compose.onAllNodesWithText("Page 2 of 2").fetchSemanticsNodes().isNotEmpty() }
+            assertFalse(opened)
+            compose.onNodeWithContentDescription("Next preview page").assertIsNotEnabled()
+            compose.onNodeWithContentDescription("Previous preview page").performClick()
+            compose.waitUntil(10_000) { compose.onAllNodesWithText("Page 1 of 2").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithContentDescription("Previous preview page").assertIsNotEnabled()
+            compose.waitForIdle()
+            com.abhisheksati.mydoc.DeviceCaptures.save("quick-preview-pages")
+        } finally { file.delete() }
+    }
+
+    @Test fun damagedPdfOffersOpenInsteadOfAnEndlessLoader() {
+        val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        val file = File.createTempFile("bad-preview-", ".pdf", context.cacheDir).apply { writeText("not a PDF") }
+        var opened = false
+        try {
+            compose.setContent { AppDesignSystemTheme { FileQuickPreviewSheet(StorageItem(file), {}, { opened = true }, {}) } }
+            compose.waitUntil(10_000) {
+                compose.onAllNodesWithText("Preview unavailable. Open the document to continue.").fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNodeWithText("Open").performClick()
+            assertTrue(opened)
+        } finally { file.delete() }
+    }
+
+    @Test fun previewRendersTheRequestedPageWithinItsPixelBudget() = kotlinx.coroutines.runBlocking {
+        val file = pdfFixture()
+        try {
+            val page = loadQuickPdfPage(file, 1)
+            assertEquals(1, page.index)
+            assertEquals(2, page.count)
+            val bitmap = requireNotNull(page.bitmap)
+            try {
+                assertFalse(bitmap.isRecycled)
+                assertTrue(maxOf(bitmap.width, bitmap.height) <= 1601)
+                assertEquals(android.graphics.Color.LTGRAY, bitmap.getPixel(bitmap.width / 2, bitmap.height / 2))
+            } finally { bitmap.recycle() }
+        } finally { file.delete() }
+    }
+
+    @Test fun protectedPdfDirectsTheUserToUnlockInTheReader() = kotlinx.coroutines.runBlocking {
+        val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        val source = pdfFixture()
+        val protected = com.abhisheksati.mydoc.tools.engine.PdfSecurityEngine(context).protectPdf(
+            source, com.abhisheksati.mydoc.tools.model.ToolOptions(userPassword = "preview-test", ownerPassword = "preview-owner")
+        ) {}
+        try {
+            val before = protected.readBytes()
+            compose.setContent { AppDesignSystemTheme { FileQuickPreviewSheet(StorageItem(protected), {}, {}, {}) } }
+            compose.waitUntil(10_000) {
+                compose.onAllNodesWithText("Password-protected document. Open to unlock.").fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNodeWithText("Open").assertIsEnabled()
+            assertArrayEquals(before, protected.readBytes())
+        } finally { source.delete(); protected.delete() }
+    }
+
+    @Test fun selectedPdfPageSurvivesStateRestoration() {
+        val file = pdfFixture()
+        val restore = androidx.compose.ui.test.junit4.StateRestorationTester(compose)
+        try {
+            restore.setContent { AppDesignSystemTheme { FileQuickPreviewSheet(StorageItem(file), {}, {}, {}) } }
+            compose.waitUntil(10_000) { compose.onAllNodesWithText("Page 1 of 2").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithContentDescription("Next preview page").performScrollTo().performClick()
+            compose.waitUntil(10_000) { compose.onAllNodesWithText("Page 2 of 2").fetchSemanticsNodes().isNotEmpty() }
+            restore.emulateSavedInstanceStateRestore()
+            compose.waitUntil(10_000) { compose.onAllNodesWithText("Page 2 of 2").fetchSemanticsNodes().isNotEmpty() }
+        } finally { file.delete() }
+    }
+
+    private fun pdfFixture(): File {
+        val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        val file = File.createTempFile("page-preview-", ".pdf", context.cacheDir)
+        val pdf = android.graphics.pdf.PdfDocument()
+        try {
+            repeat(2) { index ->
+                val page = pdf.startPage(android.graphics.pdf.PdfDocument.PageInfo.Builder(300, 420, index + 1).create())
+                page.canvas.drawColor(if (index == 0) android.graphics.Color.WHITE else android.graphics.Color.LTGRAY)
+                page.canvas.drawText("Preview page ${index + 1}", 30f, 70f, android.graphics.Paint().apply { textSize = 20f })
+                pdf.finishPage(page)
+            }
+            file.outputStream().use { pdf.writeTo(it) }
+        } finally { pdf.close() }
+        return file
+    }
+
     @Test fun detailsAndActionsRemainReadableAtLargeText() = verifyLargeText(LayoutDirection.Ltr)
     @Test fun detailsAndActionsRemainReadableWhenMirrored() = verifyLargeText(LayoutDirection.Rtl)
 
@@ -74,6 +168,7 @@ class FileQuickPreviewOnDeviceTest {
         }
         listOf(item.name, item.path).forEach { value ->
             val layouts = mutableListOf<TextLayoutResult>()
+            compose.onNodeWithTag("quick-preview-content").performScrollToNode(hasText(value))
             compose.onNodeWithText(value, useUnmergedTree = true).performScrollTo()
                 .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
             assertFalse("Preview details must wrap in full", layouts.single().hasVisualOverflow)

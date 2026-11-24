@@ -990,6 +990,13 @@
     <string name="quick_preview_thumbnail">File preview</string>
     <string name="quick_preview_hint">Thumbnail and file details. Open for the full file.</string>
     <string name="quick_preview_file">File</string>
+    <string name="quick_preview_pdf_hint">Browse pages here. Open for search, zoom and reading tools.</string>
+    <string name="quick_preview_page">Page %1$d of %2$d</string>
+    <string name="quick_preview_previous">Previous preview page</string>
+    <string name="quick_preview_next">Next preview page</string>
+    <string name="quick_preview_loading">Loading page…</string>
+    <string name="quick_preview_unavailable">Preview unavailable. Open the document to continue.</string>
+    <string name="quick_preview_locked">Password-protected document. Open to unlock.</string>
     <string name="word_image_unavailable">Image unavailable or unsupported</string>
     <string name="viewer_action_cell_grid">Cell grid</string>
     <string name="apps_installed_tab">Launcher apps</string>

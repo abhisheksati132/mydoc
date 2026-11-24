@@ -5,6 +5,9 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+### Added
+- **Browsable PDF quick preview** — move between pages directly in the file preview sheet, with page counts and bounded rendering. Protected and unreadable PDFs explain how to continue in the reader; image previews show the whole picture.
+
 ### Fixed
 - **Document zoom and scrolling** — continuous readers keep their zoom as the visible page changes. Zoomed drags use scaled scroll distances and panning instead of accidentally turning pages; sharper PDF tiles refresh when the zoom level changes.
 - **Image → PDF reliability** — editing and Create wait for active imports, and preparation failures unlock the editor for retry.

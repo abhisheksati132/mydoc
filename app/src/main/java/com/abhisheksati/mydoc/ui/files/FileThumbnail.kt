@@ -181,7 +181,8 @@ fun StorageThumbnail(
     item: StorageItem,
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
-    clipToShape: Boolean = true
+    clipToShape: Boolean = true,
+    imageContentScale: ContentScale = ContentScale.Crop
 ) {
     val context = LocalContext.current
     when {
@@ -191,7 +192,7 @@ fun StorageThumbnail(
             AsyncImage(
                 model = item.file,
                 contentDescription = contentDescription,
-                contentScale = ContentScale.Crop,
+                contentScale = imageContentScale,
                 modifier = Modifier.fillMaxSize()
             )
         }

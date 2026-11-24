@@ -12,10 +12,17 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -26,6 +33,7 @@ import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.domain.model.StorageItem
+import com.abhisheksati.mydoc.domain.model.StorageFileType
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -39,6 +47,10 @@ internal fun FileQuickPreviewSheet(
 ) {
     val scheme = MaterialTheme.colorScheme
     val previewDescription = stringResource(R.string.quick_preview_thumbnail)
+    val previewHeight = if (item.extension == "pdf" || item.fileType == StorageFileType.IMAGE) {
+        (LocalConfiguration.current.screenHeightDp * 0.42f).dp.coerceIn(180.dp, 420.dp)
+    } else 220.dp
+    var previewPage by rememberSaveable(thumbnailKey(item.path, item.sizeBytes, item.lastModified)) { mutableIntStateOf(0) }
     AppModalSheet(
         onDismissRequest = onDismiss,
         containerColor = AppTheme.colors.surface,
@@ -59,17 +71,29 @@ internal fun FileQuickPreviewSheet(
                 }
             }
             LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier.weight(1f).fillMaxWidth().testTag("quick-preview-content"),
                 contentPadding = PaddingValues(AppSpacing.screenPadding),
                 verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)
             ) {
+                item(key = "thumbnail") {
+                    Box(
+                        Modifier.fillMaxWidth().height(previewHeight).clip(AppRadius.insetShape)
+                            .background(AppTheme.colors.surfaceMuted)
+                            .then(if (item.extension == "pdf") Modifier else Modifier.clearAndSetSemantics { contentDescription = previewDescription }),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (item.isDirectory) FolderPlate(size = 72)
+                        else if (item.extension == "pdf") QuickPdfPreview(item, previewPage, { previewPage = it }, Modifier.fillMaxSize().padding(8.dp))
+                        else StorageThumbnail(item, Modifier.fillMaxSize(), clipToShape = false, imageContentScale = ContentScale.Fit)
+                    }
+                }
                 item(key = "name") {
                     Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.small)) {
                         SelectionContainer {
                             Text(item.name, style = AppTheme.typography.title,
                                 modifier = Modifier.semantics { heading() })
                         }
-                        Text(stringResource(R.string.quick_preview_hint), style = MaterialTheme.typography.bodySmall,
+                        Text(stringResource(if (item.extension == "pdf") R.string.quick_preview_pdf_hint else R.string.quick_preview_hint), style = MaterialTheme.typography.bodySmall,
                             color = scheme.onSurfaceVariant)
                     }
                 }
@@ -90,17 +114,6 @@ internal fun FileQuickPreviewSheet(
                         }
                         Text(item.formattedSize, style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.align(Alignment.CenterVertically))
-                    }
-                }
-                item(key = "thumbnail") {
-                    Box(
-                        Modifier.fillMaxWidth().height(220.dp).clip(AppRadius.cardShape)
-                            .background(AppTheme.colors.surfaceMuted)
-                            .clearAndSetSemantics { contentDescription = previewDescription },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (item.isDirectory) FolderPlate(size = 72)
-                        else StorageThumbnail(item, Modifier.fillMaxSize())
                     }
                 }
                 if (item.formattedLastModified.isNotBlank()) item(key = "modified") {
