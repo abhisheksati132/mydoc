@@ -25,6 +25,7 @@ fun documentHeroKey(uri: String): String = "document:$uri"
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun Modifier.documentHero(key: String): Modifier {
+    if (com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion.current) return this
     val sharedScope = LocalSharedTransitionScope.current ?: return this
     val visibilityScope = LocalAnimatedVisibilityScope.current ?: return this
 

@@ -33,6 +33,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.abhisheksati.mydoc.R
+import com.abhisheksati.mydoc.designsystem.animation.pressScale
+import com.abhisheksati.mydoc.designsystem.animation.LocalMotionStyle
+import com.abhisheksati.mydoc.designsystem.animation.MotionStyle
 import com.abhisheksati.mydoc.designsystem.animation.AppMotion
 import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
@@ -68,7 +71,7 @@ fun BottomNavBar(
                 val selectedIndex = listOf(HomeTab.HOME, HomeTab.LIBRARY, HomeTab.TOOLS).indexOf(currentTab).coerceAtLeast(0)
                 val offset by animateDpAsState(
                     (tabWidth + 4.dp) * selectedIndex,
-                    animationSpec = if (LocalReducedMotion.current) snap() else AppMotion.snappy(),
+                    animationSpec = if (LocalReducedMotion.current) snap() else if (LocalMotionStyle.current == MotionStyle.EXPRESSIVE) AppMotion.press() else AppMotion.snappy(),
                     label = "navigationIndicator"
                 )
                 Row(Modifier.matchParentSize()) {
@@ -124,7 +127,7 @@ private fun NavPillItem(
     )
     val shape = AppRadius.pillShape
     Column(
-        modifier = modifier.heightIn(min = 60.dp).clip(shape)
+        modifier = modifier.heightIn(min = 60.dp).pressScale(interactionSource).clip(shape)
             .then(if (focused) Modifier.border(2.dp, scheme.primary, shape) else Modifier)
             .selectable(selected = selected, role = Role.Tab,
                 interactionSource = interactionSource, onClick = onClick)

@@ -443,8 +443,8 @@ fun PdfViewerScreen(
         } else if (state.pageCount > 0) {
             val statusBarsTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
             val navBarsBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-            val topContentPadding = statusBarsTop + 56.dp + AppSpacing.paddingSmall
-            val bottomContentPadding = navBarsBottom + 56.dp + AppSpacing.paddingSmall
+            val topContentPadding = statusBarsTop + com.abhisheksati.mydoc.ui.viewer.controls.ViewerChrome.topBarHeight + AppSpacing.paddingSmall
+            val bottomContentPadding = navBarsBottom + com.abhisheksati.mydoc.ui.viewer.controls.ViewerChrome.bottomBarHeight + AppSpacing.paddingSmall
             val contentPaddingValues = PaddingValues(
                 top = topContentPadding,
                 bottom = bottomContentPadding,

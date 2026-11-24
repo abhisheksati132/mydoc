@@ -446,8 +446,8 @@ fun TextViewerScreen(
                             onNext = onSwipeToNextDocument
                         )
                         .padding(horizontal = 16.dp)
-                        .then(if (!isTruncated) Modifier.windowInsetsPadding(WindowInsets.statusBars).padding(top = 64.dp) else Modifier)
-                        .padding(bottom = 64.dp)
+                        .then(if (!isTruncated) Modifier.windowInsetsPadding(WindowInsets.statusBars).padding(top = com.abhisheksati.mydoc.ui.viewer.controls.ViewerChrome.topBarHeight) else Modifier)
+                        .padding(bottom = com.abhisheksati.mydoc.ui.viewer.controls.ViewerChrome.bottomBarHeight)
                 ) {
                 if (isMarkdown) {
                     val scale = readingPrefs.fontScale

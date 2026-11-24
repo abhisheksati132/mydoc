@@ -1,5 +1,7 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
+import com.abhisheksati.mydoc.designsystem.animation.pressScale
+
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -86,6 +88,7 @@ private suspend fun copyInk(window: Window,bounds: Map<Any,Rect>): Map<Any,Float
 
 @Composable
 internal fun AdaptiveIconButton(onClick: ()->Unit,modifier: Modifier=Modifier,content: @Composable ()->Unit) {
+    val interactions = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val samples=LocalInkSamples.current
     val id=remember { Any() }
     val fallback=com.abhisheksati.mydoc.designsystem.tokens.AppTheme.colors.inkPrimary
@@ -93,7 +96,7 @@ internal fun AdaptiveIconButton(onClick: ()->Unit,modifier: Modifier=Modifier,co
         onDispose { samples?.bounds?.remove(id);samples?.light?.remove(id) }
     }
     val ink=samples?.light?.get(id)?.let { if(it)Color.White else Color.Black } ?: fallback
-    IconButton(onClick=onClick,modifier=modifier.onGloballyPositioned {
+    IconButton(onClick=onClick,interactionSource=interactions,modifier=modifier.pressScale(interactions).onGloballyPositioned {
         val rect=it.boundsInWindow()
         if(samples?.bounds?.get(id)!=rect) { samples?.bounds?.set(id,rect);samples?.dirty=true }
     }) { CompositionLocalProvider(LocalContentColor provides ink,content=content) }

@@ -5,6 +5,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -18,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -75,6 +79,7 @@ fun ViewerBottomBar(
     hazeState: dev.chrisbanes.haze.HazeState? = null
 ) {
     val reducedMotion = LocalReducedMotion.current
+    val largeType = LocalDensity.current.fontScale > 1.3f
 
     AnimatedVisibility(
         visible = visible,
@@ -88,82 +93,85 @@ fun ViewerBottomBar(
         ) + fadeOut(AppMotion.snappy()),
         modifier = modifier
     ) {
-        GlassSurface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = AppRadius.topRoundedShape,
-            elevation = 2.dp,
-            backgroundColor = AppTheme.colors.surfaceContainerHigh,
-            hazeState = hazeState
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
+        Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center) {
+            GlassSurface(
+                modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth(),
+                shape = AppRadius.glassShape,
+                elevation = 2.dp,
+                backgroundColor = AppTheme.colors.surfaceContainerHigh,
+                hazeState = hazeState
             ) {
-                // Multi-sheet workbook tabs (Excel, PPT, etc.)
-                if (sheetItems.size > 1 && onSheetSelect != null) {
-                    LazyRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                            .selectableGroup(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        itemsIndexed(sheetItems) { idx, item ->
-                            val nextItemPage = sheetItems.getOrNull(idx + 1)?.pageIndex ?: Int.MAX_VALUE
-                            val isSelected = currentPage >= item.pageIndex && currentPage < nextItemPage
-                            SheetTab(
-                                label = item.title,
-                                selected = isSelected,
-                                onClick = { onSheetSelect(item.pageIndex) }
-                            )
-                        }
-                    }
-                }
-
-                // Action buttons: Contents, Pages, Appearance
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 60.dp)
-                        .padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    BottomBarActionButton(
-                        icon = Icons.AutoMirrored.Outlined.FormatListBulleted,
-                        label = stringResource(R.string.viewer_contents),
-                        contentDescription = stringResource(R.string.viewer_contents_description),
-                        enabled = hasOutline,
-                        onClick = onOutlineClick,
-                        modifier = Modifier.weight(1f)
-                    )
+                    // Multi-sheet workbook tabs (Excel, PPT, etc.)
+                    if (sheetItems.size > 1 && onSheetSelect != null) {
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .selectableGroup(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            itemsIndexed(sheetItems) { idx, item ->
+                                val nextItemPage = sheetItems.getOrNull(idx + 1)?.pageIndex ?: Int.MAX_VALUE
+                                val isSelected = currentPage >= item.pageIndex && currentPage < nextItemPage
+                                SheetTab(
+                                    label = item.title,
+                                    selected = isSelected,
+                                    onClick = { onSheetSelect(item.pageIndex) }
+                                )
+                            }
+                        }
+                    }
 
-                    BottomBarActionButton(
-                        icon = Icons.Outlined.PhotoLibrary,
-                        label = stringResource(R.string.viewer_pages),
-                        contentDescription = stringResource(R.string.viewer_pages_description),
-                        enabled = onPagesClick != null,
-                        onClick = { onPagesClick?.invoke() },
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    BottomBarActionButton(
-                        icon = Icons.Outlined.TextFormat,
-                        label = stringResource(R.string.viewer_appearance),
-                        contentDescription = stringResource(R.string.viewer_appearance_description),
-                        onClick = onAppearanceClick,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    if (onToolsClick != null) {
+                    // Action buttons: Contents, Pages, Appearance
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 56.dp)
+                            .then(if (largeType) Modifier.horizontalScroll(rememberScrollState()) else Modifier)
+                            .padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
                         BottomBarActionButton(
-                            icon = Icons.Outlined.Build,
-                            label = stringResource(R.string.viewer_tools),
-                            contentDescription = stringResource(R.string.viewer_tools_description),
-                            onClick = onToolsClick,
-                            modifier = Modifier.weight(1f)
+                            icon = Icons.AutoMirrored.Outlined.FormatListBulleted,
+                            label = stringResource(R.string.viewer_contents),
+                            contentDescription = stringResource(R.string.viewer_contents_description),
+                            enabled = hasOutline,
+                            onClick = onOutlineClick,
+                            modifier = if (largeType) Modifier.widthIn(min = 104.dp).padding(horizontal = 8.dp) else Modifier.weight(1f)
                         )
+
+                        BottomBarActionButton(
+                            icon = Icons.Outlined.PhotoLibrary,
+                            label = stringResource(R.string.viewer_pages),
+                            contentDescription = stringResource(R.string.viewer_pages_description),
+                            enabled = onPagesClick != null,
+                            onClick = { onPagesClick?.invoke() },
+                            modifier = if (largeType) Modifier.widthIn(min = 104.dp).padding(horizontal = 8.dp) else Modifier.weight(1f)
+                        )
+
+                        BottomBarActionButton(
+                            icon = Icons.Outlined.TextFormat,
+                            label = stringResource(R.string.viewer_appearance),
+                            contentDescription = stringResource(R.string.viewer_appearance_description),
+                            onClick = onAppearanceClick,
+                            modifier = if (largeType) Modifier.widthIn(min = 104.dp).padding(horizontal = 8.dp) else Modifier.weight(1f)
+                        )
+
+                        if (onToolsClick != null) {
+                            BottomBarActionButton(
+                                icon = Icons.Outlined.Build,
+                                label = stringResource(R.string.viewer_tools),
+                                contentDescription = stringResource(R.string.viewer_tools_description),
+                                onClick = onToolsClick,
+                                modifier = if (largeType) Modifier.widthIn(min = 104.dp).padding(horizontal = 8.dp) else Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
             }

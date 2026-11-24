@@ -75,8 +75,15 @@ data class ViewerCapabilities(
  * bar heights, so a viewer cannot drift away from the chrome it floats over.
  */
 object ViewerChrome {
-    val topBarHeight: Dp = 64.dp
-    val bottomBarHeight: Dp = 64.dp
+    val topBarHeight: Dp
+        @Composable get() = with(androidx.compose.ui.platform.LocalDensity.current) {
+            maxOf(48.dp, com.abhisheksati.mydoc.designsystem.tokens.AppTheme.typography.bodyStrong.lineHeight.toDp() +
+                com.abhisheksati.mydoc.designsystem.tokens.AppTheme.typography.metadata.lineHeight.toDp() + 12.dp) + 12.dp
+        }
+    val bottomBarHeight: Dp
+        @Composable get() = with(androidx.compose.ui.platform.LocalDensity.current) {
+            maxOf(56.dp, 24.dp + com.abhisheksati.mydoc.designsystem.tokens.AppTheme.typography.caption.lineHeight.toDp()) + 8.dp
+        }
 }
 
 /**

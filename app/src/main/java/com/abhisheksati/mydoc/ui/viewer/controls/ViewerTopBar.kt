@@ -90,239 +90,52 @@ fun ViewerTopBar(
     val colors = AppTheme.colors
     val reducedMotion = LocalReducedMotion.current
     var isMoreMenuOpen by remember { mutableStateOf(false) }
-
     AnimatedVisibility(
         visible = visible,
-        enter = if (reducedMotion) EnterTransition.None else slideInVertically(
-            initialOffsetY = { -it },
-            animationSpec = AppMotion.snappy()
-        ) + fadeIn(AppMotion.fadeFast),
-        exit = if (reducedMotion) ExitTransition.None else slideOutVertically(
-            targetOffsetY = { -it },
-            animationSpec = AppMotion.snappy()
-        ) + fadeOut(AppMotion.fadeFast),
+        enter = if (reducedMotion) EnterTransition.None else slideInVertically(AppMotion.snappy()) { -it / 3 } + fadeIn(AppMotion.fadeFast),
+        exit = if (reducedMotion) ExitTransition.None else slideOutVertically(AppMotion.snappy()) { -it / 3 } + fadeOut(AppMotion.fadeFast),
         modifier = modifier
     ) {
-        AnimatedContent(
-            targetState = isCondensed,
-            transitionSpec = {
-                if (reducedMotion) {
-                    EnterTransition.None togetherWith ExitTransition.None using null
-                } else {
-                    fadeIn(AppMotion.fadeFast) togetherWith fadeOut(AppMotion.fadeFast)
+        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            GlassSurface(shape = AppRadius.roundShape, hazeState = hazeState, elevation = 4.dp) {
+                AdaptiveIconButton(onClick = onBackClick, modifier = Modifier.size(48.dp)) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.viewer_back),
+                        tint = androidx.compose.material3.LocalContentColor.current)
                 }
-            },
-            label = "ViewerTopBarCondense"
-        ) { condensed ->
-            if (condensed) {
-                // Slim floating glass pill when scrolling down
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    GlassSurface(
-                        shape = AppRadius.roundShape,
-                        elevation = 8.dp,
-                        hazeState = hazeState.takeIf { condensed == isCondensed }
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .heightIn(min = 48.dp)
-                                .padding(horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            AdaptiveIconButton(
-                                onClick = onBackClick,
-                                modifier = Modifier.size(48.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                    contentDescription = stringResource(R.string.viewer_back),
-                                    tint = androidx.compose.material3.LocalContentColor.current,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-
-                            Text(
-                                text = formatMiddleTruncated(title, maxChars = 16),
-                                style = AppTheme.typography.captionStrong,
-                                color = colors.inkPrimary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier
-                                    .weight(1f, fill = false)
-                                    .padding(horizontal = 6.dp)
-                            )
-
-                            if (pageCount > 0) {
-                                Surface(
-                                    shape = AppRadius.roundShape,
-                                    color = colors.accent.copy(alpha = 0.12f),
-                                    modifier = Modifier.padding(end = 4.dp)
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.viewer_page_ratio, currentPage + 1, pageCount),
-                                        style = AppTheme.typography.metadataStrong,
-                                        color = colors.accent,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
-
-                            if (showSearch) {
-                                AdaptiveIconButton(
-                                    onClick = onSearchClick,
-                                    modifier = Modifier.size(48.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Search,
-                                        contentDescription = stringResource(R.string.viewer_search),
-                                        tint = androidx.compose.material3.LocalContentColor.current,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-
-                            AdaptiveIconButton(
-                                onClick = onToggleBookmark,
-                                modifier = Modifier.size(48.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                                    contentDescription = if (isBookmarked) stringResource(R.string.viewer_bookmark_remove) else stringResource(R.string.viewer_bookmark_add),
-                                    tint = androidx.compose.material3.LocalContentColor.current,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-
-                            Box {
-                                AdaptiveIconButton(
-                                    onClick = { isMoreMenuOpen = true },
-                                    modifier = Modifier.size(48.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.MoreVert,
-                                        contentDescription = stringResource(R.string.viewer_more_options),
-                                        tint = androidx.compose.material3.LocalContentColor.current,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-
-                                OverflowDropdown(
-                                    expanded = isMoreMenuOpen,
-                                    onDismiss = { isMoreMenuOpen = false },
-                                    onShareClick = onShareClick,
-                                    onTtsClick = onTtsClick,
-                                    onOcrClick = onOcrClick,
-                                    onToolsClick = onToolsClick,
-                                    onSlideshowClick = onSlideshowClick,
-                                    onReflowClick = onReflowClick,
-                                    reflowLabel = reflowLabel,
-                                    onDocumentDetailsClick = onDocumentDetailsClick,
-                                    documentDetailsLabel = documentDetailsLabel,
-                                    onExportNotesClick = onExportNotesClick
-                                )
-                            }
-                        }
+            }
+            GlassSurface(modifier = Modifier.weight(1f), shape = AppRadius.roundShape,
+                hazeState = hazeState, elevation = 4.dp) {
+                Row(Modifier.heightIn(min = 48.dp).padding(start = 16.dp, end = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
+                        Text(title, style = if (isCondensed) AppTheme.typography.captionStrong else AppTheme.typography.bodyStrong,
+                            color = colors.inkPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (pageCount > 0) Text(stringResource(R.string.viewer_page_ratio, currentPage + 1, pageCount),
+                            style = AppTheme.typography.metadata, color = colors.inkMuted)
+                    }
+                    if (showSearch) AdaptiveIconButton(onSearchClick, Modifier.size(48.dp)) {
+                        Icon(Icons.Outlined.Search, stringResource(R.string.viewer_search),
+                            tint = androidx.compose.material3.LocalContentColor.current, modifier = Modifier.size(20.dp))
                     }
                 }
-            } else {
-                // Expanded masthead
-                GlassSurface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = AppRadius.bottomRoundedShape,
-                    elevation = 6.dp,
-                    hazeState = hazeState.takeIf { condensed == isCondensed }
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 60.dp)
-                                .padding(horizontal = 6.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            AdaptiveIconButton(onClick = onBackClick) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                                    contentDescription = stringResource(R.string.viewer_back),
-                                    tint = androidx.compose.material3.LocalContentColor.current
-                                )
-                            }
-
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(horizontal = 8.dp)
-                            ) {
-                                Text(
-                                    text = formatMiddleTruncated(title, maxChars = 28),
-                                    style = AppTheme.typography.documentName,
-                                    color = colors.inkPrimary,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                if (pageCount > 0) {
-                                    Text(
-                                        text = stringResource(R.string.viewer_page_of, currentPage + 1, pageCount),
-                                        style = AppTheme.typography.metadata,
-                                        color = colors.inkMuted
-                                    )
-                                }
-                            }
-
-                            if (showSearch) {
-                                AdaptiveIconButton(onClick = onSearchClick) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Search,
-                                        contentDescription = stringResource(R.string.viewer_search),
-                                        tint = androidx.compose.material3.LocalContentColor.current
-                                    )
-                                }
-                            }
-
-                            AdaptiveIconButton(onClick = onToggleBookmark) {
-                                Icon(
-                                    imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                                    contentDescription = if (isBookmarked) stringResource(R.string.viewer_bookmark_remove) else stringResource(R.string.viewer_bookmark_add),
-                                    tint = androidx.compose.material3.LocalContentColor.current
-                                )
-                            }
-
-                            Box {
-                                AdaptiveIconButton(onClick = { isMoreMenuOpen = true }) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.MoreVert,
-                                        contentDescription = stringResource(R.string.viewer_more_options),
-                                        tint = androidx.compose.material3.LocalContentColor.current
-                                    )
-                                }
-
-                                OverflowDropdown(
-                                    expanded = isMoreMenuOpen,
-                                    onDismiss = { isMoreMenuOpen = false },
-                                    onShareClick = onShareClick,
-                                    onTtsClick = onTtsClick,
-                                    onOcrClick = onOcrClick,
-                                    onToolsClick = onToolsClick,
-                                    onSlideshowClick = onSlideshowClick,
-                                    onReflowClick = onReflowClick,
-                                    reflowLabel = reflowLabel,
-                                    onDocumentDetailsClick = onDocumentDetailsClick,
-                                    documentDetailsLabel = documentDetailsLabel,
-                                    onExportNotesClick = onExportNotesClick
-                                )
-                            }
-                        }
+            }
+            Box {
+                GlassSurface(shape = AppRadius.roundShape, hazeState = hazeState, elevation = 4.dp) {
+                    AdaptiveIconButton({ isMoreMenuOpen = true }, Modifier.size(48.dp)) {
+                        Icon(Icons.Outlined.MoreVert, stringResource(R.string.viewer_more_options),
+                            tint = androidx.compose.material3.LocalContentColor.current)
                     }
                 }
+                OverflowDropdown(
+                    expanded = isMoreMenuOpen, onDismiss = { isMoreMenuOpen = false },
+                    onShareClick = onShareClick, onTtsClick = onTtsClick, onOcrClick = onOcrClick,
+                    onToolsClick = onToolsClick, onSlideshowClick = onSlideshowClick,
+                    onReflowClick = onReflowClick, reflowLabel = reflowLabel,
+                    onDocumentDetailsClick = onDocumentDetailsClick, documentDetailsLabel = documentDetailsLabel,
+                    onExportNotesClick = onExportNotesClick,
+                    onToggleBookmark = onToggleBookmark, isBookmarked = isBookmarked)
             }
         }
     }
@@ -341,12 +154,18 @@ private fun OverflowDropdown(
     reflowLabel: String?,
     onDocumentDetailsClick: (() -> Unit)?,
     documentDetailsLabel: String?,
-    onExportNotesClick: (() -> Unit)?
+    onExportNotesClick: (() -> Unit)?,
+    onToggleBookmark: (() -> Unit)? = null,
+    isBookmarked: Boolean = false
 ) {
     AppDropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss
     ) {
+        if (onToggleBookmark != null) OverflowAction(
+            label = stringResource(if (isBookmarked) R.string.viewer_bookmark_remove else R.string.viewer_bookmark_add),
+            icon = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+            onClick = { onDismiss(); onToggleBookmark() })
         OverflowAction(
             label = stringResource(R.string.viewer_action_share),
             icon = Icons.Outlined.Share,
