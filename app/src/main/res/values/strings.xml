@@ -1240,4 +1240,12 @@
         <item quantity="one">%1$d page could not be prepared. Nothing was exported. Remove it or add the image again, then retry.</item>
         <item quantity="other">%1$d pages could not be prepared. Nothing was exported. Remove them or add the images again, then retry.</item>
     </plurals>
+    <string name="settings_glass_appearance">Glass finish</string>
+    <string name="glass_balanced">Balanced</string>
+    <string name="glass_frosted">Frosted</string>
+    <string name="glass_clear">Clear</string>
+    <string name="settings_motion_style">Motion</string>
+    <string name="motion_calm">Calm</string>
+    <string name="motion_expressive">Expressive</string>
+    <string name="settings_motion_hint">Touch feedback and menus follow your choice. Your device’s reduced motion setting always takes priority.</string>
 </resources>

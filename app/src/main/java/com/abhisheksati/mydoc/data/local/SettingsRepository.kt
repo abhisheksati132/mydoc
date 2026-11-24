@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
 import android.os.Environment
+import com.abhisheksati.mydoc.designsystem.components.GlassAppearance
+import com.abhisheksati.mydoc.designsystem.animation.MotionStyle
 import com.abhisheksati.mydoc.designsystem.components.GlassEffectMode
 import com.abhisheksati.mydoc.domain.model.HomeTab
 import com.abhisheksati.mydoc.domain.model.ReadingMode
@@ -112,6 +114,26 @@ class SettingsRepository(private val context: Context) {
 
     private val _amoledBlack = MutableStateFlow(prefs.getBoolean(KEY_AMOLED_BLACK, true))
     val amoledBlack: StateFlow<Boolean> = _amoledBlack.asStateFlow()
+
+    private val _glassAppearance = MutableStateFlow(
+        runCatching { GlassAppearance.valueOf(prefs.getString("glass_appearance", "BALANCED")!!) }
+            .getOrDefault(GlassAppearance.BALANCED))
+    val glassAppearance = _glassAppearance.asStateFlow()
+
+    fun setGlassAppearance(value: GlassAppearance) {
+        prefs.edit().putString("glass_appearance", value.name).apply()
+        _glassAppearance.value = value
+    }
+
+    private val _motionStyle = MutableStateFlow(
+        runCatching { MotionStyle.valueOf(prefs.getString("motion_style", "EXPRESSIVE")!!) }
+            .getOrDefault(MotionStyle.EXPRESSIVE))
+    val motionStyle = _motionStyle.asStateFlow()
+
+    fun setMotionStyle(value: MotionStyle) {
+        prefs.edit().putString("motion_style", value.name).apply()
+        _motionStyle.value = value
+    }
 
     private val _glassEffectMode = MutableStateFlow(loadGlassEffectMode())
     val glassEffectMode: StateFlow<GlassEffectMode> = _glassEffectMode.asStateFlow()

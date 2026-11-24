@@ -123,15 +123,17 @@ fun GlassSurface(
     rimTop: Color? = null,
     rimBottom: Color? = null,
     innerShadowColor: Color? = null,
+    material: GlassMaterial = GlassMaterial.CHROME,
     content: @Composable BoxScope.() -> Unit
 ) {
     val mode = LocalGlassEffectMode.current
+    val appearance = LocalGlassAppearance.current
     val colors = AppTheme.colors
 
     val glassActive = shouldUseLiveGlass(mode, LocalGlassEnvironment.current)
 
     val actualBackground = backgroundColor ?: colors.surface
-    val actualTint = tint ?: colors.glassTint
+    val actualTint = tint ?: colors.glassTint.copy(alpha = glassTintAlpha(AppTheme.isDark, appearance, material))
     val actualRimTop = rimTop ?: colors.glassRimTop
     val actualRimBottom = rimBottom ?: colors.glassRimBottom
     val actualInnerShadow = innerShadowColor ?: colors.glassInnerShadow
@@ -202,7 +204,7 @@ fun GlassSurface(
                 }.value
             }
             val opticalTint = tint ?: actualBackground.copy(
-                alpha = (if (isDark) 0.84f else 0.74f) + densityStep * 0.04f
+                alpha = (glassTintAlpha(isDark, appearance, material) + densityStep * 0.04f).coerceAtMost(1f)
             )
             val style = remember(shape, opticalTint, isDark) {
                 GlassStyle.regular.then {

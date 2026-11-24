@@ -38,12 +38,14 @@ fun Modifier.pressScale(
 ): Modifier = composed {
     val scale = remember { Animatable(1f) }
     val reduced = LocalReducedMotion.current
-    LaunchedEffect(interactionSource, targetScaleOnPress, reduced) {
+    val style = LocalMotionStyle.current
+    val target = if (style == MotionStyle.CALM) maxOf(targetScaleOnPress, 0.985f) else targetScaleOnPress
+    LaunchedEffect(interactionSource, target, reduced, style) {
         scale.snapTo(1f)
         if (reduced) return@LaunchedEffect
         animatePressFeedback(interactionSource, SystemClock::uptimeMillis,
-            animateIn = { scale.animateTo(targetScaleOnPress, AppMotion.pressIn()) },
-            animateOut = { scale.animateTo(1f, AppMotion.pressOut()) },
+            animateIn = { scale.animateTo(target, AppMotion.pressIn()) },
+            animateOut = { scale.animateTo(1f, if (style == MotionStyle.CALM) AppMotion.snappy() else AppMotion.pressOut()) },
             reset = { scale.snapTo(1f) })
     }
     graphicsLayer {

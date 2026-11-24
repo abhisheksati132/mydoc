@@ -210,6 +210,8 @@ class MainActivity : ComponentActivity() {
             val wallpaperColorsEnabled by app.settingsRepository.wallpaperColorsEnabled.collectAsStateWithLifecycle()
             val themeMode by app.settingsRepository.themeMode.collectAsStateWithLifecycle()
             val amoledBlack by app.settingsRepository.amoledBlack.collectAsStateWithLifecycle()
+            val glassAppearance by app.settingsRepository.glassAppearance.collectAsStateWithLifecycle()
+            val motionStyle by app.settingsRepository.motionStyle.collectAsStateWithLifecycle()
             val glassEffectMode by app.settingsRepository.glassEffectMode.collectAsStateWithLifecycle()
             val hapticsEnabled by app.settingsRepository.isHapticFeedbackEnabled.collectAsStateWithLifecycle()
             val autoResumeVideo by app.settingsRepository.autoResumeVideo.collectAsStateWithLifecycle()
@@ -283,6 +285,8 @@ class MainActivity : ComponentActivity() {
             ) {
                 CompositionLocalProvider(
                     LocalGlassEffectMode provides glassEffectMode,
+                    com.abhisheksati.mydoc.designsystem.components.LocalGlassAppearance provides glassAppearance,
+                    com.abhisheksati.mydoc.designsystem.animation.LocalMotionStyle provides motionStyle,
                     LocalReducedMotion provides reducedMotion,
                     com.abhisheksati.mydoc.designsystem.tokens.LocalHapticsEnabled provides hapticsEnabled
                 ) {

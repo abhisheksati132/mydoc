@@ -1,5 +1,7 @@
 package com.abhisheksati.mydoc.ui.settings
 
+import com.abhisheksati.mydoc.designsystem.components.GlassAppearance
+import com.abhisheksati.mydoc.designsystem.animation.MotionStyle
 import com.abhisheksati.mydoc.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,6 +34,10 @@ fun SettingsAppearanceSection(
     amoledBlack: Boolean,
     hapticFeedbackEnabled: Boolean,
     glassEffectMode: GlassEffectMode,
+    glassAppearance: GlassAppearance,
+    motionStyle: MotionStyle,
+    onGlassAppearanceChange: (GlassAppearance) -> Unit,
+    onMotionStyleChange: (MotionStyle) -> Unit,
     onThemeChange: (AppThemeMode) -> Unit,
     onAmoledBlackChange: (Boolean) -> Unit,
     onHapticFeedbackChange: (Boolean) -> Unit,
@@ -112,6 +118,38 @@ fun SettingsAppearanceSection(
         }
 
         SettingsDivider(modifier = Modifier.padding(top = 12.dp))
+
+        SettingsSectionLabel(text = stringResource(R.string.settings_glass_appearance))
+        androidx.compose.foundation.layout.FlowRow(
+            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            GlassAppearance.entries.forEach { appearance ->
+                ThemeChip(
+                    label = stringResource(when (appearance) {
+                        GlassAppearance.BALANCED -> R.string.glass_balanced
+                        GlassAppearance.FROSTED -> R.string.glass_frosted
+                        GlassAppearance.CLEAR -> R.string.glass_clear
+                    }),
+                    icon = Icons.Outlined.Palette, selected = glassAppearance == appearance,
+                    onClick = { onGlassAppearanceChange(appearance) })
+            }
+        }
+        SettingsDivider(modifier = Modifier.padding(top = 12.dp))
+        SettingsSectionLabel(text = stringResource(R.string.settings_motion_style))
+        androidx.compose.foundation.layout.FlowRow(
+            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            MotionStyle.entries.forEach { style ->
+                ThemeChip(
+                    label = stringResource(if (style == MotionStyle.CALM) R.string.motion_calm else R.string.motion_expressive),
+                    icon = Icons.Outlined.Palette, selected = motionStyle == style,
+                    onClick = { onMotionStyleChange(style) })
+            }
+        }
+        Text(stringResource(R.string.settings_motion_hint), style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(vertical = 8.dp))
+        SettingsDivider()
 
         SettingToggleRow(
             title = stringResource(R.string.settings_amoled_title),

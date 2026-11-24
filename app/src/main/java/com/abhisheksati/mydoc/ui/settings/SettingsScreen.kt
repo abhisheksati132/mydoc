@@ -76,6 +76,8 @@ fun SettingsScreen(
     val currentTheme by settingsRepository.themeMode.collectAsState()
     val amoledBlack by settingsRepository.amoledBlack.collectAsState()
     val hapticFeedbackEnabled by settingsRepository.isHapticFeedbackEnabled.collectAsState()
+    val glassAppearance by settingsRepository.glassAppearance.collectAsState()
+    val motionStyle by settingsRepository.motionStyle.collectAsState()
     val glassEffectMode by settingsRepository.glassEffectMode.collectAsState()
 
     var showClearHistoryConfirmation by remember { mutableStateOf(false) }
@@ -179,6 +181,10 @@ fun SettingsScreen(
                                 amoledBlack = amoledBlack,
                                 hapticFeedbackEnabled = hapticFeedbackEnabled,
                                 glassEffectMode = glassEffectMode,
+                                glassAppearance = glassAppearance,
+                                motionStyle = motionStyle,
+                                onGlassAppearanceChange = settingsRepository::setGlassAppearance,
+                                onMotionStyleChange = settingsRepository::setMotionStyle,
                                 onThemeChange = { settingsRepository.setThemeMode(it) },
                                 onAmoledBlackChange = { settingsRepository.setAmoledBlack(it) },
                                 onHapticFeedbackChange = { settingsRepository.setHapticFeedbackEnabled(it) },
