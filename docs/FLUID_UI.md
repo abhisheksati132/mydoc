@@ -51,10 +51,17 @@ visual checks do not establish physical-device frame rates or battery performanc
 
 - Full JVM suite: 668 tests, no failures or errors.
 - Debug build and Android-test APK build passed. Lint: no errors; 187 warnings and one hint.
-- API 35 emulator: 38 targeted tests passed, including live glass in both themes,
+- API 35 emulator: 39 distinct targeted tests passed, including live glass in both themes,
   persisted preferences, menu selection/back/reopen/reduced motion, Home/tool actions,
   double-size text, RTL, preview expansion/restoration, image edits/export recovery,
   PDF page changes while zoomed, document panning and adaptive reader ink.
 - A deliberate RTL-offset mutation failed the placement regression test; source restored.
 - Captures use synthetic test content, stay under the ignored build directory, and are
   not replacements for marketing images. Physical-device performance remains unmeasured.
+
+- Full-app launch verification also exposed a host graphics-driver stall in the emulator
+  (`glCreateProgram_enc`); the published 2.0.18 APK timed out there too. After stopping
+  the build daemon and restarting the emulator process without loading its snapshot,
+  three cold launches and native menu interaction succeeded, without another ANR.
+  A Home-with-live-backdrop integration test also passed. This does not establish a
+  physical-device startup benchmark or attribute the driver stall to the new UI.

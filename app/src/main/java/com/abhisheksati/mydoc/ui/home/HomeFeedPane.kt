@@ -240,7 +240,9 @@ fun HomeFeedPane(
 
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Box {
-                            GlassSurface(shape = AppRadius.roundShape, hazeState = hazeState, elevation = 2.dp) {
+                            // Keep controls inside scroll content opaque. That content can itself
+                            // be a backdrop source; live material belongs to overlay chrome.
+                            GlassSurface(shape = AppRadius.roundShape, elevation = 2.dp) {
                                 IconButton(onClick = { showCreateMenu = true }) {
                                     Icon(Icons.Outlined.Add, stringResource(R.string.home_create_or_open), tint = colors.ink)
                                 }

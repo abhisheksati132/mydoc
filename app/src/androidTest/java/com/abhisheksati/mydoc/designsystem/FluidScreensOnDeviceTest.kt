@@ -71,6 +71,26 @@ class FluidScreensOnDeviceTest {
         assertTrue(opened)
     }
 
+    @Test fun homeWithLiveBackdropKeepsItsCreateMenuResponsive() {
+        compose.setContent { AppDesignSystemTheme {
+            val haze = remember { dev.chrisbanes.haze.HazeState() }
+            CompositionLocalProvider(
+                com.abhisheksati.mydoc.designsystem.components.LocalGlassEffectMode provides com.abhisheksati.mydoc.designsystem.components.GlassEffectMode.ON) {
+                Box(Modifier.fillMaxSize().background(AppTheme.colors.background)) {
+                    HomeFeedPane(listOf(document), listOf(document), {}, {}, {}, {}, emptySet(), {}, {}, {}, {}, {},
+                        {}, {}, {}, {}, hazeState = haze)
+                    com.abhisheksati.mydoc.designsystem.components.BottomNavBar(
+                        com.abhisheksati.mydoc.domain.model.HomeTab.HOME, {},
+                        modifier = Modifier.align(Alignment.BottomCenter), hazeState = haze)
+                }
+            }
+        } }
+        compose.onNodeWithContentDescription("Create or open").assertIsDisplayed().performClick()
+        compose.onAllNodesWithText("Open document").assertCountEquals(2)
+        androidx.test.espresso.Espresso.pressBack()
+        compose.onNodeWithText("Resume").assertIsDisplayed()
+    }
+
     @Test fun featuredToolsStayActionableAfterTheVisualRefresh() {
         val model = ToolsViewModel(ApplicationProvider.getApplicationContext())
         var selected: PdfTool? = null
