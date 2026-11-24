@@ -63,6 +63,17 @@ class FileQuickPreviewOnDeviceTest {
         assertTrue(closed)
     }
 
+    @Test fun previewExpandsAndReturnsWithoutOpeningTheDocument() {
+        var opened = false
+        compose.setContent { AppDesignSystemTheme { FileQuickPreviewSheet(item, {}, { opened = true }, {}) } }
+        compose.onNodeWithContentDescription("Expand preview").performClick()
+        compose.onNodeWithContentDescription("Reduce preview").assertIsDisplayed()
+        com.abhisheksati.mydoc.DeviceCaptures.save("fluid-expanded-preview")
+        compose.onNodeWithContentDescription("Reduce preview").performClick()
+        compose.onNodeWithContentDescription("Expand preview").assertIsDisplayed()
+        assertFalse(opened)
+    }
+
     @Test fun pdfPagesCanBeBrowsedWithoutOpeningTheReader() {
         val file = pdfFixture()
         var opened = false

@@ -95,6 +95,10 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import androidx.exifinterface.media.ExifInterface
 import com.abhisheksati.mydoc.R
+import com.abhisheksati.mydoc.designsystem.components.AppModalSheet
+import com.abhisheksati.mydoc.designsystem.components.GlassSurface
+import com.abhisheksati.mydoc.designsystem.components.GlassMaterial
+import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.components.horizontalScrollWithFade
@@ -295,6 +299,7 @@ fun ImagePdfEditorSheet(
                         val currentIndex = pagerState.currentPage.coerceIn(0, pages.lastIndex)
                         val currentPage = pages[currentIndex]
                         val reducedMotion = LocalReducedMotion.current
+                        val editHaptics = rememberAppHaptics()
 
                         val preview: @Composable () -> Unit = {
                             HorizontalPager(
@@ -353,6 +358,7 @@ fun ImagePdfEditorSheet(
                                 canMoveLater = currentIndex < pages.lastIndex,
                                 canRemove = pages.size > 1,
                                 onRotate = { delta ->
+                                    editHaptics.tick()
                                     pages[currentIndex] = currentPage.copy(
                                         rotationDegrees = (currentPage.rotationDegrees + delta + 360) % 360
                                     )
@@ -397,6 +403,15 @@ fun ImagePdfEditorSheet(
                         val settings: @Composable () -> Unit = {
                             editorError?.let { message ->
                                 ImagePdfEditorFeedback(message, onDismiss = { editorError = null })
+                            }
+                            if (currentPage.needsBake) {
+                                TextButton(enabled = !isCreating && !isAdding && !isPreparingCrop,
+                                    onClick = {
+                                        editHaptics.snap()
+                                        pages[currentIndex] = currentPage.copy(rotationDegrees = 0, filter = ScanFilter.ORIGINAL)
+                                    }, modifier = Modifier.fillMaxWidth()) {
+                                    Text(stringResource(R.string.imgpdf_reset_adjustments))
+                                }
                             }
                             TextButton(
                                 enabled = !isCreating && !isAdding && !isPreparingCrop,
@@ -509,7 +524,7 @@ fun ImagePdfEditorSheet(
                             modifier = Modifier.weight(1f)
                         )
                         if (showSettings) {
-                            ModalBottomSheet(onDismissRequest = { showSettings = false }) {
+                            AppModalSheet(onDismissRequest = { showSettings = false }) {
                                 Text(
                                     stringResource(R.string.imgpdf_settings),
                                     style = typography.titleLarge,
@@ -518,7 +533,10 @@ fun ImagePdfEditorSheet(
                                 EditorOptions(
                                     page = currentPage,
                                     options = options,
-                                    onPageFilterChange = { filter -> pages[currentIndex] = currentPage.copy(filter = filter) },
+                                    onPageFilterChange = { filter ->
+                                        if (filter != currentPage.filter) editHaptics.tick()
+                                        pages[currentIndex] = currentPage.copy(filter = filter)
+                                    },
                                     onOptionsChange = onOptionsChange,
                                     modifier = Modifier.weight(1f, fill = false)
                                 )
@@ -613,10 +631,13 @@ private fun PagePreview(
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
-    var loading by remember(page.file, page.rotationDegrees) { mutableStateOf(true) }
-    val bitmap by produceState<Bitmap?>(initialValue = null, page.file, page.rotationDegrees) {
+    var compare by remember(page.file) { mutableStateOf(false) }
+    LaunchedEffect(page.rotationDegrees, page.filter) { compare = false }
+    val shownPage = if (compare) page.copy(rotationDegrees = 0, filter = ScanFilter.ORIGINAL) else page
+    var loading by remember(shownPage.file, shownPage.rotationDegrees) { mutableStateOf(true) }
+    val bitmap by produceState<Bitmap?>(initialValue = null, shownPage.file, shownPage.rotationDegrees) {
         value = withContext(Dispatchers.Default) {
-            renderUpright(page.file, page.rotationDegrees, PREVIEW_MAX_DIM)
+            renderUpright(shownPage.file, shownPage.rotationDegrees, PREVIEW_MAX_DIM)
         }
         loading = false
     }
@@ -636,7 +657,7 @@ private fun PagePreview(
                     .padding(10.dp),
                 contentScale = ContentScale.Fit,
                 // The live preview approximates the scan filter; the bake uses the engine.
-                colorFilter = ScanFilterEngine.getComposeColorFilter(page.filter)
+                colorFilter = ScanFilterEngine.getComposeColorFilter(shownPage.filter)
             )
         } else if (loading) {
             CircularProgressIndicator(color = scheme.primary, modifier = Modifier.size(28.dp))
@@ -657,6 +678,15 @@ private fun PagePreview(
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
             )
         }
+        if (page.needsBake) {
+            Surface(shape = AppRadius.pillShape, color = scheme.surfaceContainerHigh,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp)) {
+                TextButton(onClick = { compare = !compare }) {
+                    Text(stringResource(if (compare) R.string.imgpdf_show_edits else R.string.imgpdf_before_adjustments))
+                }
+            }
+        }
+
     }
 }
 
@@ -744,32 +774,35 @@ private fun PageActionsRow(
     onMove: (Int) -> Unit,
     onRemove: () -> Unit
 ) {
-    FlowRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        PageAction(Icons.AutoMirrored.Outlined.RotateLeft, R.string.imgpdf_rotate_left, enabled = enabled) { onRotate(-90) }
-        PageAction(Icons.AutoMirrored.Outlined.RotateRight, R.string.imgpdf_rotate_right, enabled = enabled) { onRotate(90) }
-        PageAction(Icons.Outlined.Crop, R.string.imgpdf_crop, enabled = enabled, onClick = onCrop)
-        PageAction(
-            Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
-            R.string.imgpdf_move_left,
-            enabled = enabled && canMoveEarlier
-        ) { onMove(-1) }
-        PageAction(
-            Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-            R.string.imgpdf_move_right,
-            enabled = enabled && canMoveLater
-        ) { onMove(1) }
-        PageAction(
-            Icons.Outlined.DeleteOutline,
-            R.string.imgpdf_remove_page,
-            enabled = enabled && canRemove,
-            tint = MaterialTheme.colorScheme.error
-        ) { onRemove() }
+    GlassSurface(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        material = GlassMaterial.PANEL, elevation = 1.dp, shape = AppRadius.glassShape) {
+        FlowRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            PageAction(Icons.AutoMirrored.Outlined.RotateLeft, R.string.imgpdf_rotate_left, enabled = enabled) { onRotate(-90) }
+            PageAction(Icons.AutoMirrored.Outlined.RotateRight, R.string.imgpdf_rotate_right, enabled = enabled) { onRotate(90) }
+            PageAction(Icons.Outlined.Crop, R.string.imgpdf_crop, enabled = enabled, onClick = onCrop)
+            PageAction(
+                Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
+                R.string.imgpdf_move_left,
+                enabled = enabled && canMoveEarlier
+            ) { onMove(-1) }
+            PageAction(
+                Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                R.string.imgpdf_move_right,
+                enabled = enabled && canMoveLater
+            ) { onMove(1) }
+            PageAction(
+                Icons.Outlined.DeleteOutline,
+                R.string.imgpdf_remove_page,
+                enabled = enabled && canRemove,
+                tint = MaterialTheme.colorScheme.error
+            ) { onRemove() }
+        }
     }
 }
 

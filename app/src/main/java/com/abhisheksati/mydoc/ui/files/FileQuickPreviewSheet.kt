@@ -7,6 +7,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.outlined.Fullscreen
+import androidx.compose.material.icons.outlined.FullscreenExit
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.runtime.mutableStateOf
+import com.abhisheksati.mydoc.designsystem.animation.AppMotion
+import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.MoreVert
@@ -49,9 +56,12 @@ internal fun FileQuickPreviewSheet(
     val scheme = MaterialTheme.colorScheme
     val previewDescription = stringResource(R.string.quick_preview_thumbnail)
     val windowHeight = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }
-    val previewHeight = if (item.extension == "pdf" || item.fileType == StorageFileType.IMAGE) {
+    var expanded by rememberSaveable(item.path) { mutableStateOf(false) }
+    val targetPreviewHeight = if (expanded) (windowHeight * 0.65f).coerceIn(220.dp, 720.dp) else if (item.extension == "pdf" || item.fileType == StorageFileType.IMAGE) {
         (windowHeight * 0.42f).coerceIn(180.dp, 420.dp)
     } else 220.dp
+    val previewHeight by animateDpAsState(targetPreviewHeight,
+        animationSpec = if (LocalReducedMotion.current) snap() else AppMotion.snappy(), label = "previewExpansion")
     var previewPage by rememberSaveable(thumbnailKey(item.path, item.sizeBytes, item.lastModified)) { mutableIntStateOf(0) }
     AppModalSheet(
         onDismissRequest = onDismiss,
@@ -65,6 +75,12 @@ internal fun FileQuickPreviewSheet(
             ) {
                 Text(stringResource(R.string.quick_preview_title), style = AppTheme.typography.titleSmall,
                     modifier = Modifier.weight(1f).semantics { heading() })
+                if (item.extension == "pdf" || item.fileType == StorageFileType.IMAGE) {
+                    IconButton(onClick = { expanded = !expanded }) {
+                        Icon(if (expanded) Icons.Outlined.FullscreenExit else Icons.Outlined.Fullscreen,
+                            stringResource(if (expanded) R.string.quick_preview_collapse else R.string.quick_preview_expand))
+                    }
+                }
                 if (onShare != null) IconButton(onClick = onShare) {
                     Icon(Icons.Outlined.Share, contentDescription = stringResource(R.string.action_share))
                 }

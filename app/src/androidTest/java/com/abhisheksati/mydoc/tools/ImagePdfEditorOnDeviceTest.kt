@@ -85,6 +85,19 @@ class ImagePdfEditorOnDeviceTest {
         compose.waitUntil(10_000) { attempts == 2 }
     }
 
+    @Test fun adjustmentsCanBeComparedAndResetBeforeExport() {
+        renderEditor { }
+        compose.onNodeWithContentDescription("Rotate right").performScrollTo().performClick()
+        compose.onNodeWithText("Before adjustments").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Show edits").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Before adjustments").assertIsDisplayed()
+        compose.waitForIdle()
+        DeviceCaptures.save("fluid-image-pdf-comparison")
+        compose.onNodeWithText("Reset rotation and filter").performScrollTo().performClick()
+        compose.onNodeWithText("Before adjustments").assertDoesNotExist()
+        compose.onNodeWithText("Create PDF").assertIsEnabled()
+    }
+
     @Test fun malformedImageIsRejectedWithoutAnEndlessPreviewSpinner() {
         var exports = 0
         renderEditor(invalidImage = true) { exports++ }

@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Surface
+import androidx.compose.material3.MaterialTheme
+import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -27,17 +30,20 @@ internal fun ImagePdfEditorWorkspace(
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val controlsMaxHeight = maxHeight * 0.55f
+        val controlsMaxHeight = maxHeight * 0.48f
         if (maxWidth > maxHeight) {
             Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.weight(1f).fillMaxHeight()) { preview() }
-                Column(Modifier.weight(0.8f).fillMaxHeight()) {
-                    Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
-                        filmstrip()
-                        actions()
-                        settings()
+                Surface(Modifier.weight(0.8f).fillMaxHeight(), shape = AppRadius.glassShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                    Column {
+                        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
+                            filmstrip()
+                            actions()
+                            settings()
+                        }
+                        createButton()
                     }
-                    createButton()
                 }
             }
         } else {
