@@ -28,23 +28,27 @@ internal fun PaperActionCard(
 ) {
     val colors = AppTheme.colors
     val shape = AppRadius.xLargeShape
-    Column(
+    Box(
         modifier = modifier
-            .heightIn(min = if (description == null) 82.dp else 148.dp)
+            .heightIn(min = if (description == null) 104.dp else 184.dp)
+            .pressScaleEffect(targetScaleOnPress = 0.965f, onClick = onClick)
             .clip(shape)
             .background(colors.surface, shape)
-            .background(Brush.verticalGradient(listOf(tone.copy(alpha = 0.13f), tone.copy(alpha = 0.04f))), shape)
-            .border(1.dp, tone.copy(alpha = 0.20f), shape)
-            .pressScaleEffect(onClick = onClick)
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .background(tone.copy(alpha = if (AppTheme.isDark) 0.18f else 0.12f), shape)
+            .border(1.dp, tone.copy(alpha = 0.14f), shape)
     ) {
-        Box(Modifier.size(34.dp).background(tone.copy(alpha = 0.16f), AppRadius.insetShape),
-            contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = null, tint = colors.ink, modifier = Modifier.size(20.dp))
+        Icon(icon, contentDescription = null, tint = tone.copy(alpha = 0.10f),
+            modifier = Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 8.dp)
+                .size(if (description == null) 64.dp else 104.dp))
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.size(36.dp).background(colors.surface.copy(alpha = 0.7f), AppRadius.insetShape),
+                contentAlignment = Alignment.Center) {
+                Icon(icon, contentDescription = null, tint = colors.ink, modifier = Modifier.size(21.dp))
+            }
+            if (description != null) Spacer(Modifier.height(12.dp))
+            Text(title, style = if (description == null) AppTheme.typography.bodyStrong else AppTheme.typography.heading,
+                color = colors.ink)
+            if (description != null) Text(description, style = AppTheme.typography.caption, color = colors.inkSecondary)
         }
-        Text(title, style = if (description == null) AppTheme.typography.bodyStrong else AppTheme.typography.titleSmall,
-            color = colors.ink)
-        if (description != null) Text(description, style = AppTheme.typography.caption, color = colors.inkMuted)
     }
 }

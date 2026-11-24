@@ -44,6 +44,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Description
@@ -181,7 +182,8 @@ fun HomeFeedPane(
         }
     }
 
-    var showRecentPreviews by rememberSaveable { mutableStateOf(false) }
+    var showCreateMenu by remember { mutableStateOf(false) }
+    var showRecentPreviews by rememberSaveable { mutableStateOf(true) }
     val previewColumns = if (LocalDensity.current.fontScale > 1.3f) 1 else 2
     val heroItem = continueItems.firstOrNull()
     val remainingRecents = if (heroItem != null) {
@@ -222,18 +224,38 @@ fun HomeFeedPane(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                         // Brand lockup: Seal + wordmark, per docs/brand-identity.md §3.
                         SealMark(modifier = Modifier.size(30.dp))
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = stringResource(R.string.app_name),
-                            style = AppTheme.typography.display,
-                            color = colors.ink
+                            style = AppTheme.typography.wordmark,
+                            color = colors.ink,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
                         )
                     }
 
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Box {
+                            GlassSurface(shape = AppRadius.roundShape, hazeState = hazeState, elevation = 2.dp) {
+                                IconButton(onClick = { showCreateMenu = true }) {
+                                    Icon(Icons.Outlined.Add, stringResource(R.string.home_create_or_open), tint = colors.ink)
+                                }
+                            }
+                            AppDropdownMenu(showCreateMenu, { showCreateMenu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.home_action_open_title)) },
+                                    leadingIcon = { Icon(Icons.Outlined.FolderOpen, null) },
+                                    onClick = { showCreateMenu = false; filePickerLauncher.launch(arrayOf("*/*")) })
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.home_action_scan_title)) },
+                                    leadingIcon = { Icon(Icons.Outlined.CameraAlt, null) },
+                                    onClick = { showCreateMenu = false; onScanClick() })
+                            }
+                        }
                         IconButton(
                             onClick = {
                                 haptics.tick()
@@ -335,7 +357,10 @@ fun HomeFeedPane(
             if (heroItem != null || recentItems.isNotEmpty()) {
                 item(key = "home_primary_actions") {
                     Box(itemMotion(reducedMotion)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth(),
+                            maxItemsInEachRow = previewColumns,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             PaperActionCard(
                                 stringResource(R.string.home_action_open_title), Icons.Outlined.FolderOpen,
                                 onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
@@ -439,142 +464,6 @@ fun HomeFeedPane(
                 onShare = { onShareSelectedRecents(selectedRecents) },
                 onRemove = { onRemoveSelectedRecents(selectedRecents) }
             )
-        }
-    }
-}
-
-/**
- * Hero Card: Real rendered page thumbnail + Seal teal progress bar + document title.
- */@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-@Composable
-private fun ContinueReadingHeroCard(
-    item: LibraryItem,
-    onClick: () -> Unit
-) {
-    val colors = AppTheme.colors
-
-    GlassSurface(
-        shape = AppRadius.cardShape,
-        elevation = 2.dp,
-        backgroundColor = colors.surfaceMuted,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(AppRadius.cardShape)
-            .clickable(onClick = onClick)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Real document page thumbnail with shared-element transition
-            Box(
-                modifier = Modifier
-                    .size(width = 72.dp, height = 100.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(colors.surfaceMuted)
-                    .border(width = 1.dp, color = colors.cardBorder, shape = RoundedCornerShape(8.dp))
-                    .documentHero(documentHeroKey(item.uri))
-            ) {
-                LibraryThumbnail(
-                    item = item,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-
-            // Document info and progress
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.home_continue_reading),
-                    style = AppTheme.typography.overline,
-                    color = colors.accent
-                )
-
-                Text(
-                    text = item.name,
-                    style = AppTheme.typography.titleSmall,
-                    color = colors.ink,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                // Document metadata
-                androidx.compose.foundation.layout.FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    if (item.pageCount > 0) {
-                        Text(
-                            text = stringResource(R.string.home_page_of, item.lastPage + 1, item.pageCount),
-                            style = AppTheme.typography.metadata,
-                            color = colors.inkSecondary
-                        )
-                        Text(
-                            text = "•",
-                            style = AppTheme.typography.metadata,
-                            color = colors.cardBorder
-                        )
-                    }
-                    Text(
-                        text = item.formattedSize,
-                        style = AppTheme.typography.metadata,
-                        color = colors.inkSecondary
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Progress Indicator
-                val progress = if (item.pageCount > 0) {
-                    ((item.lastPage + 1).toFloat() / item.pageCount).coerceIn(0.05f, 1f)
-                } else {
-                    item.progressFraction.coerceIn(0f, 1f)
-                }
-
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp)
-                        .clip(CircleShape),
-                    color = colors.accent,
-                    trackColor = colors.surfaceMuted
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                androidx.compose.foundation.layout.FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = item.formattedLastModified,
-                        style = AppTheme.typography.metadata,
-                        color = colors.inkMuted
-                    )
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.home_resume),
-                            style = AppTheme.typography.captionStrong,
-                            color = colors.accent
-                        )
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
-                            contentDescription = null,
-                            tint = colors.accent,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                }
-            }
         }
     }
 }
