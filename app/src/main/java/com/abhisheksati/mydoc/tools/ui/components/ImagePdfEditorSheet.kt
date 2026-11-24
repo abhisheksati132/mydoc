@@ -15,6 +15,18 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,6 +39,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import com.abhisheksati.mydoc.designsystem.animation.itemMotion
@@ -45,6 +58,9 @@ import androidx.compose.material.icons.outlined.AddPhotoAlternate
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -82,7 +98,6 @@ import com.abhisheksati.mydoc.R
 import com.abhisheksati.mydoc.designsystem.components.AppFilterChip
 import com.abhisheksati.mydoc.designsystem.components.OverlaySystemBars
 import com.abhisheksati.mydoc.designsystem.components.horizontalScrollWithFade
-import com.abhisheksati.mydoc.designsystem.components.showMessage
 import com.abhisheksati.mydoc.designsystem.tokens.AppRadius
 import com.abhisheksati.mydoc.designsystem.tokens.AppSpacing
 import com.abhisheksati.mydoc.tools.model.ImagePdfQuality
@@ -93,6 +108,7 @@ import com.abhisheksati.mydoc.tools.model.ToolOptions
 import com.abhisheksati.mydoc.tools.scan.cropper.FreeCornersCropperDialog
 import com.abhisheksati.mydoc.tools.scan.filters.ScanFilter
 import com.abhisheksati.mydoc.tools.scan.filters.ScanFilterEngine
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -104,7 +120,6 @@ private const val PREVIEW_MAX_DIM = 1600
 private const val THUMB_MAX_DIM = 240
 private const val CROP_MAX_DIM = 3000
 private const val BAKE_MAX_DIM = 3000
-private const val MAX_SAMPLE_SIZE = 32
 private const val STALE_SESSION_MS = 24L * 60 * 60 * 1000
 
 /**
@@ -120,12 +135,13 @@ private data class EditorPage(
     val needsBake: Boolean get() = rotationDegrees != 0 || filter != ScanFilter.ORIGINAL
 }
 
-private data class CropRequest(val index: Int, val bitmap: Bitmap)
+private data class CropRequest(val sourceFile: File, val bitmap: Bitmap)
 
 /**
  * Image → PDF review screen: thumbnail order, per-page crop/rotate/filter, page size, orientation,
  * margins, quality and compression. A selected image lands here instead of converting straight away.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImagePdfEditorSheet(
     initialUris: List<Uri>,
@@ -147,19 +163,30 @@ fun ImagePdfEditorSheet(
     val pages = remember { mutableStateListOf<EditorPage>() }
     var isImporting by remember { mutableStateOf(true) }
     var isCreating by remember { mutableStateOf(false) }
+    var isAdding by remember { mutableStateOf(false) }
+    var isPreparingCrop by remember { mutableStateOf(false) }
+    var editorError by remember { mutableStateOf<String?>(null) }
+    var showSettings by remember { mutableStateOf(false) }
     var cropRequest by remember { mutableStateOf<CropRequest?>(null) }
 
     val addImagesLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
     ) { uris ->
+        isAdding = false
         if (uris.isNotEmpty()) {
+            isAdding = true
+            editorError = null
             scope.launch {
-                val imported = withContext(Dispatchers.IO) {
-                    uris.mapNotNull { copyToSession(context, it, sessionDir) }
-                }
-                pages.addAll(imported.map { EditorPage(it) })
-                if (imported.size < uris.size) {
-                    context.showMessage(resources.getString(R.string.imgpdf_import_failed), long = true)
+                try {
+                    val imported = withContext(Dispatchers.IO) {
+                        uris.mapNotNull { copyToSession(context, it, sessionDir) }
+                    }
+                    pages.addAll(imported.map { EditorPage(it) })
+                    if (imported.size < uris.size) {
+                        editorError = resources.getString(R.string.imgpdf_import_failed)
+                    }
+                } finally {
+                    isAdding = false
                 }
             }
         }
@@ -183,15 +210,15 @@ fun ImagePdfEditorSheet(
         }
         pages.addAll(imported.map { EditorPage(it) })
         isImporting = false
-        if (imported.isEmpty()) {
-            context.showMessage(resources.getString(R.string.imgpdf_none_readable), long = true)
+        if (imported.size < initialUris.size) {
+            editorError = resources.getString(if (imported.isEmpty()) R.string.imgpdf_none_readable else R.string.imgpdf_import_failed)
         }
     }
 
-    BackHandler(enabled = !isCreating && cropRequest == null, onBack = onDismiss)
+    BackHandler(enabled = cropRequest == null, onBack = onDismiss)
 
     Dialog(
-        onDismissRequest = { if (!isCreating && cropRequest == null) onDismiss() },
+        onDismissRequest = { if (cropRequest == null) onDismiss() },
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
         OverlaySystemBars()
@@ -209,7 +236,7 @@ fun ImagePdfEditorSheet(
                         .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onDismiss, enabled = !isCreating) {
+                    IconButton(onClick = onDismiss, enabled = cropRequest == null) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = stringResource(R.string.action_close),
@@ -223,7 +250,7 @@ fun ImagePdfEditorSheet(
                             color = scheme.onSurface
                         )
                         Text(
-                            text = pluralStringResource(R.plurals.imgpdf_page_count, pages.size, pages.size),
+                            text = if (isImporting || isAdding) stringResource(R.string.imgpdf_importing) else pluralStringResource(R.plurals.imgpdf_page_count, pages.size, pages.size),
                             style = typography.bodySmall,
                             color = scheme.onSurfaceVariant
                         )
@@ -244,7 +271,14 @@ fun ImagePdfEditorSheet(
 
                     pages.isEmpty() -> {
                         EmptyEditorState(
-                            onPick = { addImagesLauncher.launch(arrayOf("image/*")) },
+                            message = editorError,
+                            enabled = !isAdding,
+                            onPick = {
+                                if (!isAdding) {
+                                    isAdding = true
+                                    addImagesLauncher.launch(arrayOf("image/*"))
+                                }
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
@@ -262,157 +296,236 @@ fun ImagePdfEditorSheet(
                         val currentPage = pages[currentIndex]
                         val reducedMotion = LocalReducedMotion.current
 
-                        HorizontalPager(
-                            state = pagerState,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            pageSpacing = 12.dp
-                        ) { index ->
-                            pages.getOrNull(index)?.let { page ->
-                                PagePreview(
-                                    page = page,
-                                    pageNumber = index + 1,
-                                    total = pages.size,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(horizontal = 12.dp)
-                                )
-                            }
-                        }
-
-                        LazyRow(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            itemsIndexed(pages, key = { _, page -> page.file.absolutePath }) { index, page ->
-                                Box(itemMotion(reducedMotion)) {
-                                    PageThumbnail(
+                        val preview: @Composable () -> Unit = {
+                            HorizontalPager(
+                                state = pagerState,
+                                modifier = Modifier
+                                    .fillMaxSize(),
+                                userScrollEnabled = !isCreating && !isAdding && !isPreparingCrop,
+                                pageSpacing = 12.dp
+                            ) { index ->
+                                pages.getOrNull(index)?.let { page ->
+                                    PagePreview(
                                         page = page,
-                                        index = index,
-                                        selected = index == currentIndex,
-                                        onClick = { scope.launch { pagerState.scrollToPage(index) } }
+                                        pageNumber = index + 1,
+                                        total = pages.size,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(horizontal = 12.dp)
                                     )
                                 }
                             }
-                            item(key = "add_images") {
-                                Box(itemMotion(reducedMotion)) {
-                                    AddImagesTile(onClick = { addImagesLauncher.launch(arrayOf("image/*")) })
+
+                        }
+                        val filmstrip: @Composable () -> Unit = {
+                            LazyRow(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                itemsIndexed(pages, key = { _, page -> page.file.absolutePath }) { index, page ->
+                                    Box(itemMotion(reducedMotion)) {
+                                        PageThumbnail(
+                                            page = page,
+                                            index = index,
+                                            selected = index == currentIndex,
+                                            onClick = { if (!isCreating && !isAdding && !isPreparingCrop) scope.launch { pagerState.scrollToPage(index) } }
+                                        )
+                                    }
+                                }
+                                item(key = "add_images") {
+                                    Box(itemMotion(reducedMotion)) {
+                                        AddImagesTile(enabled = !isCreating && !isAdding && !isPreparingCrop, onClick = {
+                                            isAdding = true
+                                            addImagesLauncher.launch(arrayOf("image/*"))
+                                        })
+                                    }
+                                }
+                            }
+
+                        }
+                        val actions: @Composable () -> Unit = {
+                            PageActionsRow(
+                                enabled = !isCreating && !isAdding && !isPreparingCrop,
+                                canMoveEarlier = currentIndex > 0,
+                                canMoveLater = currentIndex < pages.lastIndex,
+                                canRemove = pages.size > 1,
+                                onRotate = { delta ->
+                                    pages[currentIndex] = currentPage.copy(
+                                        rotationDegrees = (currentPage.rotationDegrees + delta + 360) % 360
+                                    )
+                                },
+                                onCrop = crop@{
+                                    if (isCreating || isAdding || isPreparingCrop) return@crop
+                                    isPreparingCrop = true
+                                    editorError = null
+                                    scope.launch {
+                                        try {
+                                            val bitmap = withContext(Dispatchers.Default) {
+                                                renderUpright(currentPage.file, currentPage.rotationDegrees, CROP_MAX_DIM)
+                                            }
+                                            if (bitmap != null) {
+                                                cropRequest = CropRequest(currentPage.file, bitmap)
+                                            } else {
+                                                editorError = resources.getString(R.string.imgpdf_none_readable)
+                                            }
+                                        } catch (cancelled: CancellationException) {
+                                            throw cancelled
+                                        } catch (_: Exception) {
+                                            editorError = resources.getString(R.string.imgpdf_crop_failed)
+                                        } finally {
+                                            isPreparingCrop = false
+                                        }
+                                    }
+                                },
+                                onMove = { delta ->
+                                    val to = (currentIndex + delta).coerceIn(0, pages.lastIndex)
+                                    if (to != currentIndex) {
+                                        pages.add(to, pages.removeAt(currentIndex))
+                                        scope.launch { pagerState.scrollToPage(to) }
+                                    }
+                                },
+                                onRemove = {
+                                    pages.removeAt(currentIndex)
+                                    currentPage.file.delete()
+                                }
+                            )
+
+                        }
+                        val settings: @Composable () -> Unit = {
+                            editorError?.let { message ->
+                                ImagePdfEditorFeedback(message, onDismiss = { editorError = null })
+                            }
+                            TextButton(
+                                enabled = !isCreating && !isAdding && !isPreparingCrop,
+                                onClick = { showSettings = true },
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
+                            ) {
+                                Column(Modifier.fillMaxWidth()) {
+                                    Text(stringResource(R.string.imgpdf_settings), style = typography.titleSmall)
+                                    Text(
+                                        "${currentPage.filter.label} · ${options.pageSizeFormat.label} · ${options.imagePdfQuality.label}",
+                                        style = typography.bodySmall,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
                             }
                         }
-
-                        PageActionsRow(
-                            canMoveEarlier = currentIndex > 0,
-                            canMoveLater = currentIndex < pages.lastIndex,
-                            canRemove = pages.size > 1,
-                            onRotate = { delta ->
-                                pages[currentIndex] = currentPage.copy(
-                                    rotationDegrees = (currentPage.rotationDegrees + delta + 360) % 360
-                                )
-                            },
-                            onCrop = {
-                                scope.launch {
-                                    val bitmap = withContext(Dispatchers.Default) {
-                                        renderUpright(currentPage.file, currentPage.rotationDegrees, CROP_MAX_DIM)
-                                    }
-                                    if (bitmap != null) {
-                                        cropRequest = CropRequest(currentIndex, bitmap)
-                                    } else {
-                                        context.showMessage(resources.getString(R.string.imgpdf_none_readable), long = true)
-                                    }
-                                }
-                            },
-                            onMove = { delta ->
-                                val to = (currentIndex + delta).coerceIn(0, pages.lastIndex)
-                                if (to != currentIndex) {
-                                    pages.add(to, pages.removeAt(currentIndex))
-                                    scope.launch { pagerState.scrollToPage(to) }
-                                }
-                            },
-                            onRemove = {
-                                pages.removeAt(currentIndex)
-                                currentPage.file.delete()
-                            }
-                        )
-
-                        EditorOptions(
-                            page = currentPage,
-                            options = options,
-                            onPageFilterChange = { filter ->
-                                pages[currentIndex] = currentPage.copy(filter = filter)
-                            },
-                            onOptionsChange = onOptionsChange
-                        )
-
-                        Button(
-                            onClick = {
-                                if (isCreating || pages.isEmpty()) return@Button
-                                isCreating = true
-                                // Snapshot on the main thread so background baking never reads the
-                                // SnapshotStateList while a swipe or edit mutates it.
-                                val snapshot = pages.toList()
-                                scope.launch {
-                                    val baked = withContext(Dispatchers.Default) {
-                                        snapshot.map { page ->
-                                            if (!page.needsBake) {
-                                                page.file
-                                            } else {
-                                                val bitmap = renderFinal(page) ?: return@map null
-                                                val target = File(sessionDir, "baked_${System.nanoTime()}.jpg")
-                                                val written = writeJpeg(bitmap, target)
-                                                bitmap.recycle()
-                                                if (written) target else null
+                        val createButton: @Composable () -> Unit = {
+                            Button(
+                                enabled = !isCreating && !isAdding && !isPreparingCrop,
+                                onClick = {
+                                    if (isCreating || isAdding || isPreparingCrop || pages.isEmpty()) return@Button
+                                    isCreating = true
+                                    editorError = null
+                                    // Snapshot on the main thread so background baking never reads the
+                                    // SnapshotStateList while a swipe or edit mutates it.
+                                    val snapshot = pages.toList()
+                                    scope.launch {
+                                        val preparedFiles = mutableListOf<File>()
+                                        var handedOff = false
+                                        try {
+                                            val baked = withContext(Dispatchers.Default) {
+                                                snapshot.map { page ->
+                                                    if (!page.needsBake) {
+                                                        page.file
+                                                    } else {
+                                                        val bitmap = renderFinal(page) ?: return@map null
+                                                        val target = File(sessionDir, "baked_${System.nanoTime()}.jpg")
+                                                        preparedFiles.add(target)
+                                                        val written = try { writeJpeg(bitmap, target) } finally { bitmap.recycle() }
+                                                        if (written) target else null
+                                                    }
+                                                }
                                             }
+                                            val readable = baked.filterNotNull()
+                                            if (readable.isEmpty()) {
+                                                editorError = resources.getString(R.string.imgpdf_none_readable)
+                                                return@launch
+                                            }
+                                            if (readable.size < snapshot.size) {
+                                                editorError = resources.getQuantityString(R.plurals.imgpdf_export_incomplete, snapshot.size - readable.size, snapshot.size - readable.size)
+                                                return@launch
+                                            }
+                                            val uris = readable.mapNotNull { file ->
+                                                runCatching {
+                                                    FileProvider.getUriForFile(
+                                                        context,
+                                                        "${context.packageName}.fileprovider",
+                                                        file
+                                                    )
+                                                }.getOrNull()
+                                            }
+                                            if (uris.isEmpty()) {
+                                                editorError = resources.getString(R.string.imgpdf_none_readable)
+                                                return@launch
+                                            }
+                                            if (uris.size != snapshot.size) {
+                                                editorError = resources.getString(R.string.imgpdf_create_failed)
+                                                return@launch
+                                            }
+                                            onCreate(uris)
+                                            handedOff = true
+                                        } catch (cancelled: CancellationException) {
+                                            throw cancelled
+                                        } catch (_: Exception) {
+                                            editorError = resources.getString(R.string.imgpdf_create_failed)
+                                        } catch (_: OutOfMemoryError) {
+                                            editorError = resources.getString(R.string.imgpdf_create_failed)
+                                        } finally {
+                                            if (!handedOff) preparedFiles.forEach { it.delete() }
+                                            isCreating = false
                                         }
                                     }
-                                    val readable = baked.filterNotNull()
-                                    isCreating = false
-                                    if (readable.isEmpty()) {
-                                        context.showMessage(resources.getString(R.string.imgpdf_none_readable), long = true)
-                                        return@launch
-                                    }
-                                    if (readable.size < snapshot.size) {
-                                        context.showMessage(
-                                            resources.getString(R.string.imgpdf_some_unreadable, snapshot.size - readable.size),
-                                            long = true
-                                        )
-                                    }
-                                    val uris = readable.mapNotNull { file ->
-                                        runCatching {
-                                            FileProvider.getUriForFile(
-                                                context,
-                                                "${context.packageName}.fileprovider",
-                                                file
-                                            )
-                                        }.getOrNull()
-                                    }
-                                    if (uris.isEmpty()) {
-                                        context.showMessage(resources.getString(R.string.imgpdf_none_readable), long = true)
-                                        return@launch
-                                    }
-                                    onCreate(uris)
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 10.dp)
+                                    .heightIn(min = 52.dp),
+                                shape = AppRadius.cardShape
+                            ) {
+                                if (isCreating) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        color = scheme.onPrimary,
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(stringResource(R.string.imgpdf_creating), style = typography.titleSmall)
+                                } else {
+                                    Text(stringResource(R.string.imgpdf_create_pdf), style = typography.titleSmall)
                                 }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 10.dp)
-                                .height(52.dp),
-                            shape = AppRadius.cardShape
-                        ) {
-                            if (isCreating) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp),
-                                    color = scheme.onPrimary,
-                                    strokeWidth = 2.dp
+                            }
+                        }
+                        ImagePdfEditorWorkspace(
+                            preview = preview,
+                            filmstrip = filmstrip,
+                            actions = actions,
+                            settings = settings,
+                            createButton = createButton,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (showSettings) {
+                            ModalBottomSheet(onDismissRequest = { showSettings = false }) {
+                                Text(
+                                    stringResource(R.string.imgpdf_settings),
+                                    style = typography.titleLarge,
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                                 )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(stringResource(R.string.imgpdf_creating), style = typography.titleSmall)
-                            } else {
-                                Text(stringResource(R.string.imgpdf_create_pdf), style = typography.titleSmall)
+                                EditorOptions(
+                                    page = currentPage,
+                                    options = options,
+                                    onPageFilterChange = { filter -> pages[currentIndex] = currentPage.copy(filter = filter) },
+                                    onOptionsChange = onOptionsChange,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                                TextButton(
+                                    onClick = { showSettings = false },
+                                    modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+                                ) { Text(stringResource(R.string.action_done)) }
                             }
                         }
                     }
@@ -429,21 +542,33 @@ fun ImagePdfEditorSheet(
                     cropRequest = null
                 },
                 onCropped = { cropped ->
+                    isAdding = true
                     cropRequest = null
-                    if (!request.bitmap.isRecycled) request.bitmap.recycle()
+                    if (request.bitmap !== cropped && !request.bitmap.isRecycled) request.bitmap.recycle()
                     scope.launch {
-                        val page = pages.getOrNull(request.index)
                         val target = File(sessionDir, "crop_${System.nanoTime()}.jpg")
-                        val written = withContext(Dispatchers.IO) { writeJpeg(cropped, target) }
-                        cropped.recycle()
-                        if (page == null || !written) {
-                            context.showMessage(resources.getString(R.string.imgpdf_crop_failed), long = true)
-                            return@launch
+                        var committed = false
+                        try {
+                            val index = pages.indexOfFirst { it.file == request.sourceFile }
+                            val page = pages.getOrNull(index)
+                            if (page == null) return@launch
+                            val written = withContext(Dispatchers.IO) { writeJpeg(cropped, target) }
+                            if (!written) {
+                                editorError = resources.getString(R.string.imgpdf_crop_failed)
+                                return@launch
+                            }
+                            pages[index] = page.copy(file = target, rotationDegrees = 0)
+                            committed = true
+                            if (page.file != target) page.file.delete()
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (_: Exception) {
+                            editorError = resources.getString(R.string.imgpdf_crop_failed)
+                        } finally {
+                            if (!cropped.isRecycled) cropped.recycle()
+                            if (!committed) target.delete()
+                            isAdding = false
                         }
-                        // The crop was taken from the rotated render, so it is upright already;
-                        // the filter stays selected and is applied when the PDF is created.
-                        pages[request.index] = page.copy(file = target, rotationDegrees = 0)
-                        if (page.file != target) page.file.delete()
                     }
                 }
             )
@@ -452,7 +577,7 @@ fun ImagePdfEditorSheet(
 }
 
 @Composable
-private fun EmptyEditorState(onPick: () -> Unit, modifier: Modifier = Modifier) {
+private fun EmptyEditorState(onPick: () -> Unit, modifier: Modifier = Modifier, message: String? = null, enabled: Boolean = true) {
     val scheme = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
     Column(
@@ -467,12 +592,12 @@ private fun EmptyEditorState(onPick: () -> Unit, modifier: Modifier = Modifier) 
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = stringResource(R.string.imgpdf_empty_body),
+            text = message ?: stringResource(R.string.imgpdf_empty_body),
             style = typography.bodyMedium,
             color = scheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(20.dp))
-        OutlinedButton(onClick = onPick, shape = AppRadius.cardShape) {
+        OutlinedButton(onClick = onPick, enabled = enabled, shape = AppRadius.cardShape) {
             Icon(Icons.Outlined.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text(stringResource(R.string.imgpdf_pick_images), style = typography.titleSmall)
@@ -488,10 +613,12 @@ private fun PagePreview(
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
+    var loading by remember(page.file, page.rotationDegrees) { mutableStateOf(true) }
     val bitmap by produceState<Bitmap?>(initialValue = null, page.file, page.rotationDegrees) {
         value = withContext(Dispatchers.Default) {
             renderUpright(page.file, page.rotationDegrees, PREVIEW_MAX_DIM)
         }
+        loading = false
     }
     Box(
         modifier = modifier
@@ -503,7 +630,7 @@ private fun PagePreview(
         if (frame != null && !frame.isRecycled) {
             Image(
                 bitmap = frame.asImageBitmap(),
-                contentDescription = null,
+                contentDescription = stringResource(R.string.imgpdf_preview_page, pageNumber, total),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(10.dp),
@@ -511,8 +638,10 @@ private fun PagePreview(
                 // The live preview approximates the scan filter; the bake uses the engine.
                 colorFilter = ScanFilterEngine.getComposeColorFilter(page.filter)
             )
-        } else {
+        } else if (loading) {
             CircularProgressIndicator(color = scheme.primary, modifier = Modifier.size(28.dp))
+        } else {
+            Text(stringResource(R.string.imgpdf_none_readable), modifier = Modifier.padding(20.dp))
         }
         Surface(
             shape = AppRadius.pillShape,
@@ -548,7 +677,7 @@ private fun PageThumbnail(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .clip(AppRadius.insetShape)
-            .clickable(onClick = onClick)
+            .selectable(selected = selected, role = Role.Tab, onClick = onClick)
             .padding(2.dp)
     ) {
         Box(
@@ -583,7 +712,7 @@ private fun PageThumbnail(
 }
 
 @Composable
-private fun AddImagesTile(onClick: () -> Unit) {
+private fun AddImagesTile(enabled: Boolean = true, onClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     Box(
         modifier = Modifier
@@ -591,7 +720,7 @@ private fun AddImagesTile(onClick: () -> Unit) {
             .clip(AppRadius.insetShape)
             .background(scheme.surfaceContainerHigh)
             .border(1.dp, scheme.outlineVariant, AppRadius.insetShape)
-            .clickable(onClick = onClick),
+            .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -603,8 +732,10 @@ private fun AddImagesTile(onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PageActionsRow(
+    enabled: Boolean,
     canMoveEarlier: Boolean,
     canMoveLater: Boolean,
     canRemove: Boolean,
@@ -613,30 +744,30 @@ private fun PageActionsRow(
     onMove: (Int) -> Unit,
     onRemove: () -> Unit
 ) {
-    Row(
+    FlowRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        PageAction(Icons.AutoMirrored.Outlined.RotateLeft, R.string.imgpdf_rotate_left) { onRotate(-90) }
-        PageAction(Icons.AutoMirrored.Outlined.RotateRight, R.string.imgpdf_rotate_right) { onRotate(90) }
-        PageAction(Icons.Outlined.Crop, R.string.imgpdf_crop, onClick = onCrop)
+        PageAction(Icons.AutoMirrored.Outlined.RotateLeft, R.string.imgpdf_rotate_left, enabled = enabled) { onRotate(-90) }
+        PageAction(Icons.AutoMirrored.Outlined.RotateRight, R.string.imgpdf_rotate_right, enabled = enabled) { onRotate(90) }
+        PageAction(Icons.Outlined.Crop, R.string.imgpdf_crop, enabled = enabled, onClick = onCrop)
         PageAction(
             Icons.AutoMirrored.Outlined.KeyboardArrowLeft,
             R.string.imgpdf_move_left,
-            enabled = canMoveEarlier
+            enabled = enabled && canMoveEarlier
         ) { onMove(-1) }
         PageAction(
             Icons.AutoMirrored.Outlined.KeyboardArrowRight,
             R.string.imgpdf_move_right,
-            enabled = canMoveLater
+            enabled = enabled && canMoveLater
         ) { onMove(1) }
         PageAction(
             Icons.Outlined.DeleteOutline,
             R.string.imgpdf_remove_page,
-            enabled = canRemove,
+            enabled = enabled && canRemove,
             tint = MaterialTheme.colorScheme.error
         ) { onRemove() }
     }
@@ -651,13 +782,32 @@ private fun PageAction(
     onClick: () -> Unit
 ) {
     val description = stringResource(labelRes)
-    IconButton(onClick = onClick, enabled = enabled) {
-        Icon(
-            imageVector = icon,
-            contentDescription = description,
-            tint = if (enabled) tint else tint.copy(alpha = 0.38f)
-        )
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.widthIn(min = 56.dp, max = 112.dp)
+            .clip(AppRadius.insetShape)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .semantics(mergeDescendants = true) { contentDescription = description }
+            .padding(horizontal = 4.dp, vertical = 8.dp)
+    ) {
+        Icon(icon, contentDescription = null, tint = if (enabled) tint else tint.copy(alpha = 0.38f), modifier = Modifier.size(24.dp))
+        Spacer(Modifier.height(6.dp))
+    val shortLabel = when (labelRes) {
+        R.string.imgpdf_rotate_left -> R.string.imgpdf_action_left
+        R.string.imgpdf_rotate_right -> R.string.imgpdf_action_right
+        R.string.imgpdf_move_left -> R.string.imgpdf_action_earlier
+        R.string.imgpdf_move_right -> R.string.imgpdf_action_later
+        R.string.imgpdf_remove_page -> R.string.action_remove
+        else -> labelRes
     }
+    Text(
+        stringResource(shortLabel), style = MaterialTheme.typography.labelSmall,
+        color = if (enabled) tint else tint.copy(alpha = 0.38f),
+        maxLines = 2, overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.clearAndSetSemantics { }
+    )
+    }
+
 }
 
 @Composable
@@ -665,13 +815,14 @@ private fun EditorOptions(
     page: EditorPage,
     options: ToolOptions,
     onPageFilterChange: (ScanFilter) -> Unit,
-    onOptionsChange: ((ToolOptions) -> ToolOptions) -> Unit
+    onOptionsChange: ((ToolOptions) -> ToolOptions) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .heightIn(max = 240.dp)
+            .heightIn(max = 460.dp)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
     ) {
@@ -787,22 +938,26 @@ private fun EditorSectionLabel(text: String) {
     )
 }
 
-private fun copyToSession(context: Context, uri: Uri, dir: File): File? = runCatching {
+private suspend fun copyToSession(context: Context, uri: Uri, dir: File): File? {
     dir.mkdirs()
     val rawName = queryDisplayName(context, uri)?.substringAfterLast('/') ?: "image"
     val safeName = rawName.replace(Regex("[^A-Za-z0-9._-]"), "_").take(64).ifBlank { "image" }
     val target = File(dir, "src_${System.nanoTime()}_$safeName")
-    val opened = context.contentResolver.openInputStream(uri)?.use { input ->
-        target.outputStream().use { output -> input.copyTo(output) }
-        true
-    } ?: false
-    if (!opened || target.length() == 0L) {
-        target.delete()
-        null
-    } else {
-        target
+    val staged = stageEditorImage(target) {
+        context.contentResolver.openInputStream(uri)
+    } ?: return null
+    // Validate without allocating pixels: a nonempty provider stream need not be an image.
+    val valid = runCatching {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(staged.absolutePath, bounds)
+        bounds.outWidth > 0 && bounds.outHeight > 0
+    }.getOrDefault(false)
+    if (!valid) {
+        staged.delete()
+        return null
     }
-}.getOrNull()
+    return staged
+}
 
 private fun queryDisplayName(context: Context, uri: Uri): String? = runCatching {
     if (uri.scheme == "content") {
@@ -821,17 +976,20 @@ private fun queryDisplayName(context: Context, uri: Uri): String? = runCatching 
 }.getOrNull()
 
 /** Sampled decode with EXIF orientation applied, then an editor rotation on top. */
-private fun renderUpright(file: File, rotationDegrees: Int, maxDim: Int): Bitmap? {
+private fun renderUpright(file: File, rotationDegrees: Int, maxDim: Int): Bitmap? = try {
+    decodeUpright(file, rotationDegrees, maxDim)
+} catch (_: Exception) {
+    null
+} catch (_: OutOfMemoryError) {
+    null
+}
+
+private fun decodeUpright(file: File, rotationDegrees: Int, maxDim: Int): Bitmap? {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeFile(file.absolutePath, bounds)
     if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
 
-    var sample = 1
-    while (max(bounds.outWidth, bounds.outHeight) / (sample.toLong() * 2) >= maxDim &&
-        sample <= MAX_SAMPLE_SIZE
-    ) {
-        sample *= 2
-    }
+    val sample = editorImageSampleSize(bounds.outWidth, bounds.outHeight, maxDim)
 
     var bitmap = BitmapFactory.decodeFile(
         file.absolutePath,
@@ -847,7 +1005,12 @@ private fun renderUpright(file: File, rotationDegrees: Int, maxDim: Int): Bitmap
             if (flipped) setScale(-1f, 1f)
             postRotate(totalRotation.toFloat())
         }
-        val transformed = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        val transformed = try {
+            Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        } catch (failure: Throwable) {
+            bitmap.recycle()
+            throw failure
+        }
         if (transformed !== bitmap) {
             bitmap.recycle()
             bitmap = transformed

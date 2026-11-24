@@ -100,7 +100,7 @@ fun PdfViewerScreen(
     val zoomScale = zoomState.scale
 
     // Reset zoom when page or viewing layout mode changes
-    LaunchedEffect(state.currentPage, state.isContinuousScroll, state.isDualPageView) {
+    LaunchedEffect(if (state.isContinuousScroll || state.isDualPageView) null else state.currentPage, state.isContinuousScroll, state.isDualPageView, state.isFitPage) {
         zoomState.reset()
     }
     var isPageJumpDialogOpen by remember { mutableStateOf(false) }
@@ -457,6 +457,9 @@ fun PdfViewerScreen(
                 zoomState = zoomState,
                 isContinuous = state.isContinuousScroll,
                 isDualPage = state.isDualPageView,
+                showZoomControls = state.areControlsVisible && !state.isSearchOpen,
+                zoomControlsAtTop = isTtsVisible,
+                onVerticalScroll = { delta -> lazyListState.dispatchRawDelta(delta) },
                 isDoubleTapEnabled = app?.settingsRepository?.doubleTapZoom?.value ?: true,
                 onToggleControls = viewModel::toggleControls,
                 onPrevPage = {

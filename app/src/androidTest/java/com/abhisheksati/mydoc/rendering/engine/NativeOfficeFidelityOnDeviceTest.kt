@@ -29,6 +29,7 @@ class NativeOfficeFidelityOnDeviceTest {
             val before = source.readBytes()
             val result = PptxConverter.convertPptxToPdf(context, Uri.fromFile(source), source.name)
             checkPages(result, listOf("IMPRESS FIRST SLIDE", "IMPRESS SECOND SLIDE", "PRESENTATION TABLE", "North", "South"))
+            assertPageMarkers(result, listOf("IMPRESS FIRST SLIDE", "IMPRESS SECOND SLIDE"))
             assertRedPicture(result)
             assertArrayEquals("Opening must preserve the source package", before, source.readBytes())
             val again = PptxConverter.convertPptxToPdf(context, Uri.fromFile(source), source.name)
@@ -41,6 +42,7 @@ class NativeOfficeFidelityOnDeviceTest {
             val before = source.readBytes()
             val result = XlsxConverter.convertToPages(context, Uri.fromFile(source), source.name)
             checkPages(result, listOf("CALC SUMMARY SHEET", "CALC DETAIL SHEET", "SECOND WORKSHEET CONTENT", "North", "South"))
+            assertPageMarkers(result, listOf("CALC SUMMARY SHEET", "CALC DETAIL SHEET"))
             assertRedPicture(result)
             assertArrayEquals(before, source.readBytes())
             assertEquals(result.pdfFile,
@@ -106,6 +108,19 @@ class NativeOfficeFidelityOnDeviceTest {
                 assertTrue("Closing must remove this session's encrypted preview", privatePreviews().minus(before).isEmpty())
             } finally { instrumentation.runOnMainSync { store.clear() } }
         }
+    }
+
+    private fun assertPageMarkers(result: OfficeConversion, markers: List<String>) {
+        val renderer = MuPdfRenderer(filePath = requireNotNull(result.pdfFile).absolutePath)
+        try {
+            for ((page, marker) in markers.withIndex()) {
+                val text = renderer.getPageText(page).orEmpty()
+                assertTrue("Page ${page + 1} must contain $marker: $text", text.contains(marker))
+                markers.filter { it != marker }.forEach { other ->
+                    assertFalse("Page ${page + 1} contains another page's marker $other", text.contains(other))
+                }
+            }
+        } finally { renderer.close() }
     }
 
     private fun checkPages(result: OfficeConversion, expected: List<String>) {

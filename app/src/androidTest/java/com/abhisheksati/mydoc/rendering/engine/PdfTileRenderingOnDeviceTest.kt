@@ -134,4 +134,20 @@ class PdfTileRenderingOnDeviceTest {
             kotlin.math.abs(mean - bottomRight) <= 8
         )
     }
+    @Test
+    fun theOtherTwoTilesRetainTheirReferenceQuadrants() {
+        val renderer = renderer()
+        try {
+            for ((region, expected) in listOf(
+                RectF(0.5f, 0f, 1f, 0.5f) to topRight,
+                RectF(0f, 0.5f, 0.5f, 1f) to bottomLeft
+            )) {
+                val tile = requireNotNull(renderer.renderRegion(0, region, 400f, 200, 200, ReadingMode.NORMAL))
+                try {
+                    assertTrue("Wrong content for $region", kotlin.math.abs(meanOf(tile) - expected) <= 8)
+                } finally { tile.recycle() }
+            }
+        } finally { renderer.close() }
+    }
+
 }

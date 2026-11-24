@@ -10,6 +10,16 @@ import org.junit.Test
 
 class ZoomMathTest {
 
+    @Test fun `zoomed scrolling consumes screen distance at the current scale`() {
+        assertEquals(0f, ZoomMath.remainingVerticalPan(-120f, 60f, 2f), 0.001f)
+        assertEquals(0f, ZoomMath.remainingVerticalPan(120f, -40f, 3f), 0.001f)
+    }
+
+    @Test fun `unconsumed scroll at document boundary becomes viewport pan`() {
+        assertEquals(-80f, ZoomMath.remainingVerticalPan(-120f, 20f, 2f), 0.001f)
+        assertEquals(120f, ZoomMath.remainingVerticalPan(120f, 0f, 2f), 0.001f)
+    }
+
     @Test
     fun `calculateMaxPan at 1x scale is always zero`() {
         val viewport = Size(1080f, 1920f)

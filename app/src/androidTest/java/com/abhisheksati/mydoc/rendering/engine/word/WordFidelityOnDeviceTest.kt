@@ -22,7 +22,15 @@ class WordFidelityOnDeviceTest {
                 val result = DocxConverter.convertDocxToPdf(context, Uri.fromFile(source), source.name)
                 assertTrue("$name must produce readable pages", result is OfficeConversion.Success)
                 val renderer = com.abhisheksati.mydoc.rendering.engine.MuPdfRenderer(filePath = requireNotNull(result.pdfFile).absolutePath)
-                try { assertTrue(renderer.pageCount > 0) } finally { renderer.close() }
+                try {
+                    assertTrue(renderer.pageCount > 0)
+                    val expected = when (name) {
+                        "fidelity.docx", "template.dotx" -> "Native Word fidelity fixture"
+                        "sample.odt", "sample.ott", "sample.fodt", "sample.rtf" -> "Word format fixture"
+                        else -> null // Legacy binary fixture smoke; no invented reference text.
+                    }
+                    if (expected != null) assertTrue("$name must retain its reference text", renderer.getDocumentText().orEmpty().contains(expected))
+                } finally { renderer.close() }
             } finally { source.delete() }
         }
         // The native worker's network restriction must never affect the reader process.

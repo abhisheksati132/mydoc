@@ -73,6 +73,8 @@ import com.abhisheksati.mydoc.ui.viewer.controls.ViewerCapabilities
 import com.abhisheksati.mydoc.ui.viewer.controls.edgeFlingToDocument
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerChrome
 import com.abhisheksati.mydoc.ui.viewer.controls.OutlineDrawer
+import com.abhisheksati.mydoc.ui.viewer.controls.ZoomableViewport
+import com.abhisheksati.mydoc.ui.viewer.controls.rememberZoomState
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerScaffold
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerThemeTokens
 import com.abhisheksati.mydoc.viewmodel.SpreadsheetViewModel
@@ -92,6 +94,7 @@ fun SpreadsheetViewerScreen(
     onSwipeToNextDocument: (() -> Unit)? = null,
     onSwipeToPreviousDocument: (() -> Unit)? = null
 ) {
+    val zoomState = rememberZoomState(key = document.uri)
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp
     val colors = LocalAppColors.current
@@ -140,7 +143,7 @@ fun SpreadsheetViewerScreen(
             supportsPageGrid = false,
             supportsSlideshow = false,
             supportsTts = false,
-            supportsZoom = false,
+            supportsZoom = true,
             supportsContinuousScroll = false,
             supportsDualPageView = false
         ),
@@ -243,6 +246,15 @@ fun SpreadsheetViewerScreen(
                     fun widthFor(c: Int) = currentSheet.columnWidths[c]?.dp ?: 110.dp
                     fun heightFor(r: Int) = (currentSheet.rowHeightsDp[r] ?: currentSheet.defaultRowHeightDp).dp
 
+                    ZoomableViewport(
+                        zoomState = zoomState,
+                        isContinuous = true,
+                        isDualPage = false,
+                        showZoomControls = !isSearchOpen,
+                        onVerticalScroll = { delta -> gridState.dispatchRawDelta(delta) },
+                        onHorizontalScroll = { delta -> horizontalScrollState.dispatchRawDelta(delta) },
+                        onToggleControls = {}, onPrevPage = {}, onNextPage = {}
+                    ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         Column(modifier = Modifier.fillMaxSize()) {
                             if (currentSheet.truncated) {
@@ -387,6 +399,7 @@ fun SpreadsheetViewerScreen(
                                 }
                             }
                         }
+                    }
                     }
                 }
             }

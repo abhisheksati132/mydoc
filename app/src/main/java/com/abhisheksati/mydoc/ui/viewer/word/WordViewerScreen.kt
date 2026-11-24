@@ -82,6 +82,8 @@ import com.abhisheksati.mydoc.ui.viewer.controls.ViewerChrome
 import com.abhisheksati.mydoc.ui.viewer.controls.OutlineDrawer
 import com.abhisheksati.mydoc.ui.viewer.controls.PageJumpDialog
 import com.abhisheksati.mydoc.rendering.engine.OutlineItem
+import com.abhisheksati.mydoc.ui.viewer.controls.ZoomableViewport
+import com.abhisheksati.mydoc.ui.viewer.controls.rememberZoomState
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerScaffold
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerThemeTokens
 import kotlinx.coroutines.Dispatchers
@@ -102,6 +104,7 @@ fun WordViewerScreen(
     onSwipeToNextDocument: (() -> Unit)? = null,
     onSwipeToPreviousDocument: (() -> Unit)? = null
 ) {
+    val zoomState = rememberZoomState(key = document.uri)
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp
     val colors = LocalAppColors.current
@@ -275,7 +278,7 @@ fun WordViewerScreen(
             supportsPageGrid = false,
             supportsSlideshow = false,
             supportsTts = true,
-            supportsZoom = false,
+            supportsZoom = true,
             supportsContinuousScroll = false,
             supportsDualPageView = false
         ),
@@ -340,6 +343,15 @@ fun WordViewerScreen(
                 modifier = Modifier.statusBarsPadding()
             )
         } else {
+            ZoomableViewport(
+                zoomState = zoomState,
+                isContinuous = true,
+                isDualPage = false,
+                showZoomControls = !isSearchOpen,
+                zoomControlsAtTop = isTtsVisible,
+                onVerticalScroll = { delta -> lazyListState.dispatchRawDelta(delta) },
+                onToggleControls = {}, onPrevPage = {}, onNextPage = {}
+            ) {
             LazyColumn(
                 state = lazyListState,
                 modifier = Modifier
@@ -428,6 +440,7 @@ fun WordViewerScreen(
                         }
                     }
                 }
+            }
             }
         }
     }

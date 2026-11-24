@@ -12,6 +12,10 @@ object ZoomMath {
     const val MAX_SCALE = 6.0f
     const val DOUBLE_TAP_SCALE = 2.5f
 
+    /** List scrolling uses unscaled pixels; return only the finger motion it did not consume. */
+    fun remainingVerticalPan(panY: Float, consumedScroll: Float, scale: Float): Float =
+        panY + consumedScroll * scale
+
     /**
      * Calculates the new pan offset when scaling around an arbitrary centroid:
      * When [viewportSize] is provided, accounts for Compose graphicsLayer's TransformOrigin.Center.

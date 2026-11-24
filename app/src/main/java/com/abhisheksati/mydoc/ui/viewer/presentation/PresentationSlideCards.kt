@@ -90,19 +90,14 @@ fun VisualSlideCard(
         }
 
         Box(
-            modifier = cardModifier
-                .clip(MaterialTheme.shapes.extraLarge)
-                .background(cardBgColor.copy(alpha = 0.5f))
-                .border(1.dp, Color.White.copy(alpha = 0.08f), MaterialTheme.shapes.extraLarge)
-                .padding(6.dp),
+            modifier = cardModifier.clipToBounds(),
             contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(slideBg, MaterialTheme.shapes.large)
-                    .border(0.5.dp, Color.Black.copy(alpha = 0.06f), MaterialTheme.shapes.large)
-                    .clip(MaterialTheme.shapes.large)
+                    .background(slideBg)
+                    .clipToBounds()
             ) {
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                     val totalWidth = maxWidth
@@ -390,19 +385,14 @@ fun OutlineSlideCard(
         }
 
         Box(
-            modifier = cardModifier
-                .clip(MaterialTheme.shapes.extraLarge)
-                .background(cardBgColor.copy(alpha = 0.5f))
-                .border(1.dp, Color.White.copy(alpha = 0.08f), MaterialTheme.shapes.extraLarge)
-                .padding(6.dp),
+            modifier = cardModifier.clipToBounds(),
             contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(cardBgColor, MaterialTheme.shapes.large)
-                    .border(0.5.dp, Color.Black.copy(alpha = 0.06f), MaterialTheme.shapes.large)
-                    .clip(MaterialTheme.shapes.large)
+                    .background(cardBgColor)
+                    .clipToBounds()
                     .padding(AppSpacing.paddingLarge)
             ) {
                 Column(

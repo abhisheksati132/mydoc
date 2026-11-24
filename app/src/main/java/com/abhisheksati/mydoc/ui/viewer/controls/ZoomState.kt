@@ -15,6 +15,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
@@ -28,6 +31,13 @@ class ZoomState(
     initialOffsetX: Float = 0f,
     initialOffsetY: Float = 0f
 ) {
+    private var animationJob: Job? = null
+
+    fun stopAnimation() {
+        animationJob?.cancel()
+        animationJob = null
+    }
+
     var scale by mutableFloatStateOf(initialScale)
         internal set
 
@@ -55,6 +65,7 @@ class ZoomState(
     }
 
     suspend fun reset(animate: Boolean = false) {
+        stopAnimation()
         if (!animate) {
             scale = 1.0f
             offset = Offset.Zero
@@ -64,6 +75,8 @@ class ZoomState(
     }
 
     suspend fun animateTo(targetScale: Float, targetOffset: Offset, durationMs: Int = 200) {
+        stopAnimation()
+        animationJob = currentCoroutineContext().job
         val clampedScale = targetScale.coerceIn(ZoomMath.MIN_SCALE, ZoomMath.MAX_SCALE)
         val clampedOffset = if (clampedScale > 1.0f) {
             ZoomMath.clampOffset(targetOffset, viewportSize, clampedScale)
@@ -86,10 +99,13 @@ class ZoomState(
                 }
             }
         }
+        animationJob = null
     }
 
     suspend fun fling(velocity: Offset) {
+        stopAnimation()
         if (scale <= 1.0f) return
+        animationJob = currentCoroutineContext().job
         val maxPan = ZoomMath.calculateMaxPan(viewportSize, scale)
         coroutineScope {
             val animX = Animatable(offset.x)
@@ -115,6 +131,7 @@ class ZoomState(
                 }
             }
         }
+        animationJob = null
     }
 
     companion object {

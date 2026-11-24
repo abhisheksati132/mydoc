@@ -71,7 +71,7 @@ import java.util.zip.ZipOutputStream
  * 3. Page-by-page streaming to avoid OOM.
  * 4. Automatic temporary file cleanup in finally blocks.
  */
-private const val MAX_TOOL_INPUT_BYTES = 256L * 1024 * 1024
+internal const val MAX_TOOL_INPUT_BYTES = 256L * 1024 * 1024
 private const val MAX_TOOL_TOTAL_BYTES = 512L * 1024 * 1024
 
 /**

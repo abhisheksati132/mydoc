@@ -1,5 +1,8 @@
 package com.abhisheksati.mydoc.ui.viewer.controls
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDecay
+import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateCentroid
@@ -12,6 +15,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -40,6 +47,10 @@ fun ZoomableViewport(
     onNextPage: () -> Unit,
     modifier: Modifier = Modifier,
     isDoubleTapEnabled: Boolean = true,
+    showZoomControls: Boolean = true,
+    zoomControlsAtTop: Boolean = false,
+    onVerticalScroll: ((Float) -> Float)? = null,
+    onHorizontalScroll: ((Float) -> Float)? = null,
     content: @Composable () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -47,6 +58,8 @@ fun ZoomableViewport(
 
     // Callers pass freshly-allocated lambdas on every recomposition. Keying the gesture
     // detector on them restarted it mid-pinch; read the latest through state instead.
+    val latestOnHorizontalScroll by rememberUpdatedState(onHorizontalScroll)
+    val latestOnVerticalScroll by rememberUpdatedState(onVerticalScroll)
     val latestOnToggleControls by rememberUpdatedState(onToggleControls)
     val latestOnPrevPage by rememberUpdatedState(onPrevPage)
     val latestOnNextPage by rememberUpdatedState(onNextPage)
@@ -56,13 +69,18 @@ fun ZoomableViewport(
             .fillMaxSize()
             .onSizeChanged { newSize ->
                 zoomState.viewportSize = newSize.toSize()
+                zoomState.updateScaleAndOffset(zoomState.scale, zoomState.offset)
             }
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize().clipToBounds()
             .pointerInput(
                 zoomState,
                 isContinuous,
                 isDualPage,
                 isDoubleTapEnabled
             ) {
+                var motionJob: Job? = null
                 var pendingSingleTapJob: Job? = null
                 var lastTapTime = 0L
                 var lastTapPosition = Offset.Zero
@@ -71,7 +89,9 @@ fun ZoomableViewport(
 
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                    val downTime = System.currentTimeMillis()
+                    motionJob?.cancel()
+                    pendingSingleTapJob?.cancel()
+                    zoomState.stopAnimation()
                     val downPosition = down.position
                     val velocityTracker = VelocityTracker()
                     velocityTracker.addPosition(down.uptimeMillis, down.position)
@@ -126,42 +146,23 @@ fun ZoomableViewport(
                             val dragDelta = change.positionChange()
                             totalDragDistance += dragDelta.getDistance()
 
-                            if (zoomState.scale > 1.0f) {
-                                if (isContinuous || isDualPage) {
-                                    // In continuous or dual-page mode:
-                                    // Consume horizontal drags to pan the zoomed view.
-                                    // Pass vertical drags to the LazyColumn so scrolling continues across pages!
-                                    if (abs(dragDelta.x) > 0.5f) {
-                                        val newOffsetX = zoomState.offset.x + dragDelta.x
-                                        zoomState.updateScaleAndOffset(
-                                            newScale = zoomState.scale,
-                                            newOffset = Offset(newOffsetX, zoomState.offset.y)
-                                        )
-                                        change.consume()
-                                    }
-                                } else {
-                                    // In paged mode (HorizontalPager):
-                                    // Pan zoomed page. When at horizontal edge, allow pager to swipe!
-                                    val (atLeft, atRight) = ZoomMath.isAtHorizontalEdge(
-                                        offsetX = zoomState.offset.x,
-                                        viewportWidth = zoomState.viewportSize.width,
-                                        scale = zoomState.scale
-                                    )
-
-                                    val isSwipingPastLeft = atLeft && dragDelta.x > 0
-                                    val isSwipingPastRight = atRight && dragDelta.x < 0
-
-                                    if (isSwipingPastLeft || isSwipingPastRight) {
-                                        // Let HorizontalPager take the swipe
-                                    } else {
-                                        // Consume both axes to pan zoomed content within bounds
-                                        val newOffset = zoomState.offset + dragDelta
-                                        zoomState.updateScaleAndOffset(zoomState.scale, newOffset)
-                                        change.consume()
-                                    }
-                                }
-                            } else {
-                                // Scale == 1.0: Do not consume drag. Let child list or pager scroll naturally.
+                            if (zoomState.scale > 1.0f && totalDragDistance >= touchSlop) {
+                                pendingSingleTapJob?.cancel()
+                                val scroll = if (isContinuous || isDualPage) {
+                                    latestOnVerticalScroll?.invoke(-dragDelta.y / zoomState.scale) ?: 0f
+                                } else 0f
+                                val horizontalScroll = latestOnHorizontalScroll?.invoke(-dragDelta.x / zoomState.scale) ?: 0f
+                                val panX = ZoomMath.remainingVerticalPan(dragDelta.x, horizontalScroll, zoomState.scale)
+                                val panY = ZoomMath.remainingVerticalPan(dragDelta.y, scroll, zoomState.scale)
+                                zoomState.updateScaleAndOffset(
+                                    zoomState.scale,
+                                    zoomState.offset + Offset(panX, panY)
+                                )
+                                // Zoom owns the gesture. In continuous mode the list gets the
+                                // correctly scaled vertical distance explicitly, including diagonals.
+                                // Paged readers keep panning until zoom is reset, never turning a
+                                // page just because the finger reaches its edge.
+                                change.consume()
                             }
                         }
                     }
@@ -183,7 +184,7 @@ fun ZoomableViewport(
                             lastTapTime = 0L
 
                             // Execute double-tap zoom
-                            coroutineScope.launch {
+                            motionJob = coroutineScope.launch {
                                 if (zoomState.scale > 1.5f) {
                                     zoomState.animateTo(ZoomMath.MIN_SCALE, Offset.Zero)
                                 } else {
@@ -225,8 +226,21 @@ fun ZoomableViewport(
                     } else if (zoomState.scale > 1.0f) {
                         // Fling inertia on lift
                         val velocity = velocityTracker.calculateVelocity()
-                        coroutineScope.launch {
-                            zoomState.fling(Offset(velocity.x, velocity.y))
+                        motionJob = coroutineScope.launch {
+                            if ((isContinuous || isDualPage) && latestOnVerticalScroll != null) {
+                                var previous = 0f
+                                Animatable(0f).animateDecay(velocity.y, exponentialDecay()) {
+                                    val delta = value - previous
+                                    previous = value
+                                    val consumed = latestOnVerticalScroll?.invoke(-delta / zoomState.scale) ?: 0f
+                                    val remaining = ZoomMath.remainingVerticalPan(delta, consumed, zoomState.scale)
+                                    zoomState.updateScaleAndOffset(
+                                        zoomState.scale, zoomState.offset + Offset(0f, remaining)
+                                    )
+                                }
+                            } else {
+                                zoomState.fling(Offset(velocity.x, velocity.y))
+                            }
                         }
                     }
                 }
@@ -235,6 +249,7 @@ fun ZoomableViewport(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .clipToBounds()
                 .graphicsLayer {
                     scaleX = zoomState.scale
                     scaleY = zoomState.scale
@@ -243,6 +258,14 @@ fun ZoomableViewport(
                 }
         ) {
             content()
+        }
+        }
+        if (showZoomControls) {
+            ViewerZoomControl(
+                zoomState = zoomState,
+                modifier = Modifier.align(if (zoomControlsAtTop) Alignment.TopEnd else Alignment.BottomEnd)
+                    .padding(end = 16.dp, top = if (zoomControlsAtTop) 88.dp else 0.dp, bottom = if (zoomControlsAtTop) 0.dp else 88.dp)
+            )
         }
     }
 }

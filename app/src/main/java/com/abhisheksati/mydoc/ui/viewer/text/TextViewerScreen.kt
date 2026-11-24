@@ -64,6 +64,8 @@ import com.abhisheksati.mydoc.ui.viewer.DocumentProblemScreen
 import com.abhisheksati.mydoc.ui.viewer.controls.SearchOverlay
 import com.abhisheksati.mydoc.ui.viewer.controls.edgeFlingToDocument
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerCapabilities
+import com.abhisheksati.mydoc.ui.viewer.controls.ZoomableViewport
+import com.abhisheksati.mydoc.ui.viewer.controls.rememberZoomState
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerScaffold
 import com.abhisheksati.mydoc.ui.viewer.controls.ViewerThemeTokens
 import kotlinx.coroutines.Dispatchers
@@ -169,6 +171,7 @@ fun TextViewerScreen(
     onSwipeToNextDocument: (() -> Unit)? = null,
     onSwipeToPreviousDocument: (() -> Unit)? = null
 ) {
+    val zoomState = rememberZoomState(key = document.uri)
     val context = LocalContext.current
     val app = context.applicationContext as? MyDocApp
     val colors = LocalAppColors.current
@@ -339,7 +342,7 @@ fun TextViewerScreen(
             supportsPageGrid = false,
             supportsSlideshow = false,
             supportsTts = true,
-            supportsZoom = false
+            supportsZoom = true
         ),
         currentPage = if (itemCount > 0) visibleLineIndex.coerceIn(0, itemCount - 1) else 0,
         pageCount = itemCount.coerceAtLeast(1),
@@ -402,6 +405,15 @@ fun TextViewerScreen(
                 modifier = Modifier.statusBarsPadding()
             )
         } else {
+            ZoomableViewport(
+                zoomState = zoomState,
+                isContinuous = true,
+                isDualPage = false,
+                showZoomControls = !isSearchOpen,
+                zoomControlsAtTop = isTtsVisible,
+                onVerticalScroll = { delta -> listState.dispatchRawDelta(delta) },
+                onToggleControls = {}, onPrevPage = {}, onNextPage = {}
+            ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 if (isTruncated) {
                     Box(
@@ -585,6 +597,7 @@ fun TextViewerScreen(
                 }
             }
         }
+            }
     }
 }
 }

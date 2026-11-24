@@ -1215,4 +1215,22 @@
         <item quantity="one">%d page selected</item>
         <item quantity="other">%d pages selected</item>
     </plurals>
+    <string name="viewer_zoom">Zoom</string>
+    <string name="viewer_zoom_percent">%1$d%%</string>
+    <string name="viewer_zoom_action">Zoom, %1$d%%</string>
+    <string name="viewer_zoom_reset">Reset zoom</string>
+    <string name="viewer_zoom_hint">Drag to move around the page. Scroll vertically to continue through the document.</string>
+    <string name="imgpdf_settings">Page &amp; PDF settings</string>
+    <string name="imgpdf_action_earlier">Earlier</string>
+    <string name="imgpdf_action_later">Later</string>
+    <string name="imgpdf_action_left">Left</string>
+    <string name="imgpdf_action_right">Right</string>
+    <string name="imgpdf_preview_page">Page %1$d of %2$d</string>
+    <string name="imgpdf_create_failed">Could not prepare the PDF. Try fewer or smaller images.</string>
+    <string name="imgpdf_importing">Preparing images…</string>
+    <string name="imgpdf_dismiss_error">Dismiss message</string>
+    <plurals name="imgpdf_export_incomplete">
+        <item quantity="one">%1$d page could not be prepared. Nothing was exported. Remove it or add the image again, then retry.</item>
+        <item quantity="other">%1$d pages could not be prepared. Nothing was exported. Remove them or add the images again, then retry.</item>
+    </plurals>
 </resources>

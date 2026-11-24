@@ -5,7 +5,17 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+### Fixed
+- **Document zoom and scrolling** — continuous readers keep their zoom as the visible page changes. Zoomed drags use scaled scroll distances and panning instead of accidentally turning pages; sharper PDF tiles refresh when the zoom level changes.
+- **Image → PDF reliability** — editing and Create wait for active imports, and preparation failures unlock the editor for retry.
+- **Image → PDF imports** — image staging now uses the PDF tools' 256 MiB per-file limit, observes cancellation between reads, and removes incomplete imports when a provider fails or the editor closes.
+- **Image editing recovery** — unreadable images are rejected before preview; crop updates follow the source image, failed exports keep all pages for retry, and errors remain visible with a dismiss action. Preview decoding stays within its size budget even for very large image headers.
+
 ### Changed
+- **Reader zoom controls** — an accessible percentage button opens a slider, presets, and Reset zoom across page, slide, reflow, text, and spreadsheet readers.
+- **Presentation canvas** — slides use flat document edges, without the nested rounded frames and decorative inset.
+- **Image → PDF workspace** — larger preview, labelled editing actions, selected thumbnails, a dedicated settings sheet, and a scrollable editing rail in landscape. Create stays reachable at large text sizes.
+- **Reader verification** — reference tests now check Word format text, individual Excel worksheets and PowerPoint slides, and all four PDF tile quadrants. Device regressions cover zoom, cropping, unreadable imports, and export retry.
 - **Motion across the app** — one motion grammar now covers the transitions that used to snap: opening a Settings category pushes and Back pops it the other way, the Tools category pill slides with the swipe that switched it, and file lists, grids, gallery date groups, Home recents, tool rows and the image-to-PDF thumbnail strip glide to their new slots while additions fade in and removals fade out. Files' loading, empty, list and grid states cross-fade instead of hard-swapping, and every new animation collapses to no motion when the system animation scale is off.
 
 ## [2.0.17] — 2026-11-17

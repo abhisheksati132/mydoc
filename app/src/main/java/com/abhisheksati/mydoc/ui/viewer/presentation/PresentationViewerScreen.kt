@@ -358,7 +358,7 @@ fun PresentationViewerScreen(
     }
 
     // Reset zoom when swiping slides
-    LaunchedEffect(currentSlideIndex) {
+    LaunchedEffect(if (isContinuousVertical) null else currentSlideIndex, isContinuousVertical) {
         zoomState.reset()
     }
 
@@ -634,6 +634,8 @@ fun PresentationViewerScreen(
                     zoomState = zoomState,
                     isContinuous = isContinuousVertical,
                     isDualPage = false,
+                    showZoomControls = isControlsVisible && !isSlideshowMode,
+                    onVerticalScroll = { delta -> lazyListState.dispatchRawDelta(delta) },
                     isDoubleTapEnabled = true,
                     onToggleControls = {
                         if (!isSlideshowMode) isControlsVisible = !isControlsVisible
@@ -672,10 +674,10 @@ fun PresentationViewerScreen(
                                 if (slide != null) {
                                     val slideAspect = if (slide.aspectRatio.isFinite() && slide.aspectRatio > 0.1f) slide.aspectRatio else (16f / 9f)
                                     Surface(
-                                        shape = AppRadius.cardShape,
+                                        shape = RoundedCornerShape(0.dp),
                                         color = cardBgColor,
-                                        tonalElevation = 2.dp,
-                                        shadowElevation = 3.dp,
+                                        tonalElevation = 0.dp,
+                                        shadowElevation = 0.dp,
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .aspectRatio(slideAspect)
@@ -741,10 +743,10 @@ fun PresentationViewerScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Surface(
-                                        shape = if (isSlideshowMode) RoundedCornerShape(0.dp) else AppRadius.cardShape,
+                                        shape = RoundedCornerShape(0.dp),
                                         color = cardBgColor,
-                                        tonalElevation = if (isSlideshowMode) 0.dp else 2.dp,
-                                        shadowElevation = if (isSlideshowMode) 0.dp else 4.dp,
+                                        tonalElevation = 0.dp,
+                                        shadowElevation = 0.dp,
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .aspectRatio(slideAspect)
