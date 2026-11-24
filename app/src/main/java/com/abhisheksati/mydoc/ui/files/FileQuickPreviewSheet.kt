@@ -21,7 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -47,8 +48,9 @@ internal fun FileQuickPreviewSheet(
 ) {
     val scheme = MaterialTheme.colorScheme
     val previewDescription = stringResource(R.string.quick_preview_thumbnail)
+    val windowHeight = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }
     val previewHeight = if (item.extension == "pdf" || item.fileType == StorageFileType.IMAGE) {
-        (LocalConfiguration.current.screenHeightDp * 0.42f).dp.coerceIn(180.dp, 420.dp)
+        (windowHeight * 0.42f).coerceIn(180.dp, 420.dp)
     } else 220.dp
     var previewPage by rememberSaveable(thumbnailKey(item.path, item.sizeBytes, item.lastModified)) { mutableIntStateOf(0) }
     AppModalSheet(
