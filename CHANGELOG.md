@@ -5,6 +5,8 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+## [2.0.18] — 2026-11-24
+
 ### Added
 - **Browsable PDF quick preview** — move between pages directly in the file preview sheet, with page counts and bounded rendering. Protected and unreadable PDFs explain how to continue in the reader; image previews show the whole picture.
 

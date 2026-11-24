@@ -19,6 +19,8 @@ Android 8.0+ · 100% on-device · Free and open source · [Changelog](CHANGELOG.
 
 ## One app, three jobs
 
+**New in 2.0.18:** browse PDF pages in Quick Preview, zoom with dedicated controls, and create PDFs in a cleaner image editor with clearer recovery when something goes wrong.
+
 | Find it | Read it | Finish it |
 | --- | --- | --- |
 | Pinned folders, saved searches, document and media categories, date-grouped photos, previews, and browsing inside ZIP archives. | PDF, Word, Excel, PowerPoint, EPUB, and text — with recents, restored reading positions, bookmarks, outline, search, and format-aware controls. | Scan pages, merge and reorder, compress, sign, or pull text out of a scan with the bundled OCR. |

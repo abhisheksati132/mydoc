@@ -1,6 +1,6 @@
 # Quick preview
 
-The original thumbnail preview shipped in v2.0.0. Paged PDF previews are currently unreleased.
+The original thumbnail preview shipped in v2.0.0. Paged PDF previews ship in v2.0.18.
 
 In an explorer list or grid, open a file or folder action menu and choose **Quick preview**. The sheet
 puts content first, followed by the full selectable name and location, format, size or folder count,
