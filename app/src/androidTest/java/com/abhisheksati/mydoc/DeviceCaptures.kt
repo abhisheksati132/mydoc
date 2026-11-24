@@ -9,10 +9,10 @@ import android.provider.MediaStore
 
 /** Synthetic test UI only; captured artifacts make layout regressions reviewable in CI. */
 object DeviceCaptures {
-    fun save(name: String) {
+    fun save(name: String, renderedBitmap: Bitmap? = null) {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
-        val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot())
+        val bitmap = renderedBitmap ?: requireNotNull(instrumentation.uiAutomation.takeScreenshot())
         try {
             if (Build.VERSION.SDK_INT >= 29) {
                 // Shared test media survives Gradle uninstalling the target APK after the suite.

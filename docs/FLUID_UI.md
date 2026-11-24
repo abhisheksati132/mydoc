@@ -31,3 +31,30 @@ components, assets and typography; no reference-app code or assets are imported.
 Validate menu edge placement and RTL, preference persistence, reduced motion, large type,
 preview navigation and editor actions. Run unit tests, lint and a debug build. Emulator
 visual checks do not establish physical-device frame rates or battery performance.
+
+## Implemented
+
+- Anchored menu unfolding and folding, with edge/RTL placement, keyboard traversal,
+  back dismissal, and input blocked during the closing animation.
+- Persisted glass finishes and Calm/Expressive control motion. Contrast, hardware,
+  power and system reduced-motion policy remain authoritative.
+- A larger Home cover, visual recents, an anchored Open/Scan menu and illustrated
+  action cards shared with featured tools. Large text stacks the Home actions.
+- Floating reader groups, bookmark actions in overflow, adaptive text clearance,
+  scrollable large-text actions, and shared-element motion disabled under reduced motion.
+- Expandable image/PDF previews. The native preview sheet opens the reader through
+  standard navigation; it does not claim a shared element across separate windows.
+- A larger image editing preview, grouped controls and a landscape panel, before/after
+  rotation/filter comparison, reset and intentional edit haptics. Crop output is preserved.
+
+## Verification — 2026-11-24
+
+- Full JVM suite: 668 tests, no failures or errors.
+- Debug build and Android-test APK build passed. Lint: no errors; 187 warnings and one hint.
+- API 35 emulator: 38 targeted tests passed, including live glass in both themes,
+  persisted preferences, menu selection/back/reopen/reduced motion, Home/tool actions,
+  double-size text, RTL, preview expansion/restoration, image edits/export recovery,
+  PDF page changes while zoomed, document panning and adaptive reader ink.
+- A deliberate RTL-offset mutation failed the placement regression test; source restored.
+- Captures use synthetic test content, stay under the ignored build directory, and are
+  not replacements for marketing images. Physical-device performance remains unmeasured.
