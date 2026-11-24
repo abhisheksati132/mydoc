@@ -1,12 +1,16 @@
 package com.abhisheksati.mydoc.designsystem
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.core.app.ApplicationProvider
 import com.abhisheksati.mydoc.data.local.SettingsRepository
 import com.abhisheksati.mydoc.designsystem.animation.LocalMotionStyle
@@ -18,6 +22,8 @@ import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
 
 class FluidControlsOnDeviceTest {
     @get:Rule val compose = createComposeRule()
@@ -64,5 +70,52 @@ class FluidControlsOnDeviceTest {
             original.setGlassAppearance(previousGlass)
             original.setMotionStyle(previousMotion)
         }
+    }
+
+    @Test fun backDismissesTheMenuAndTheTriggerCanOpenItAgain() {
+        var open by mutableStateOf(false)
+        compose.setContent { AppDesignSystemTheme {
+            Box {
+                TextButton(onClick = { open = true }) { Text("Open menu") }
+                AppDropdownMenu(open, { open = false }) {
+                    DropdownMenuItem(text = { Text("Menu action") }, onClick = { open = false })
+                }
+            }
+        } }
+        compose.onNodeWithText("Open menu").performClick()
+        compose.onNodeWithText("Menu action").assertIsDisplayed()
+        androidx.test.espresso.Espresso.pressBack()
+        compose.onNodeWithText("Menu action").assertDoesNotExist()
+        compose.onNodeWithText("Open menu").performClick()
+        compose.onNodeWithText("Menu action").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Menu action").assertDoesNotExist()
+    }
+
+    @Test fun liveGlassPresetsKeepTheirActionAvailableInBothThemes() {
+        var appearance by mutableStateOf(GlassAppearance.BALANCED)
+        var dark by mutableStateOf(false)
+        var clicks = 0
+        compose.setContent {
+            val haze = remember { HazeState() }
+            AppDesignSystemTheme(darkTheme = dark) {
+                CompositionLocalProvider(
+                    com.abhisheksati.mydoc.designsystem.components.LocalGlassEffectMode provides com.abhisheksati.mydoc.designsystem.components.GlassEffectMode.ON,
+                    com.abhisheksati.mydoc.designsystem.components.LocalGlassAppearance provides appearance) {
+                    Box(Modifier.fillMaxSize()) {
+                        Box(Modifier.fillMaxSize().hazeSource(haze)) { Text("Paper behind glass", Modifier.padding(24.dp)) }
+                        com.abhisheksati.mydoc.designsystem.components.GlassSurface(hazeState = haze) {
+                            TextButton(onClick = { clicks++ }) { Text("Glass action") }
+                        }
+                    }
+                }
+            }
+        }
+        listOf(false, true).forEach { night ->
+            GlassAppearance.entries.forEach { finish ->
+                compose.runOnIdle { dark = night; appearance = finish }
+                compose.onNodeWithText("Glass action").assertIsDisplayed().performClick()
+            }
+        }
+        compose.runOnIdle { assertEquals(6, clicks) }
     }
 }

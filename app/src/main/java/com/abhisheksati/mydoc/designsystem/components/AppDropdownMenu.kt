@@ -19,6 +19,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.input.key.*
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
@@ -88,6 +94,7 @@ fun AppDropdownMenu(
         }
     }
     Popup(popupPositionProvider = positionProvider, onDismissRequest = onDismissRequest, properties = properties) {
+        val focusManager = LocalFocusManager.current
         GlassSurface(
             modifier = modifier.graphicsLayer {
                 transformOrigin = origin
@@ -101,7 +108,23 @@ fun AppDropdownMenu(
             elevation = 8.dp
         ) {
             CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
-                Column(Modifier.width(IntrinsicSize.Max).verticalScroll(scrollState).padding(vertical = 8.dp), content = content)
+                Column(Modifier.width(IntrinsicSize.Max).verticalScroll(scrollState)
+                    .then(if (!expanded) Modifier.clearAndSetSemantics { } else Modifier)
+                    .pointerInput(expanded) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                if (!expanded) event.changes.forEach { it.consume() }
+                            }
+                        }
+                    }.onKeyEvent { event ->
+                    if (!expanded) true else if (event.type != KeyEventType.KeyDown) false else when (event.key) {
+                        Key.DirectionDown -> { focusManager.moveFocus(FocusDirection.Next); true }
+                        Key.DirectionUp -> { focusManager.moveFocus(FocusDirection.Previous); true }
+                        Key.Escape -> { onDismissRequest(); true }
+                        else -> false
+                    }
+                }.padding(vertical = 8.dp), content = content)
             }
         }
     }
