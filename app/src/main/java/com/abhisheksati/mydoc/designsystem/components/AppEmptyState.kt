@@ -10,6 +10,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -52,7 +54,7 @@ fun AppEmptyState(
             text = title ?: message,
             style = typography.bodyLargeStrong,
             color = colors.ink,
-            modifier = Modifier.widthIn(max = 360.dp)
+            modifier = Modifier.widthIn(max = 360.dp).then(if (title != null) Modifier.semantics { heading() } else Modifier)
         )
         if (title != null) {
             Spacer(modifier = Modifier.height(AppSpacing.xSmall))

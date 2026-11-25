@@ -42,8 +42,12 @@ visual checks do not establish physical-device frame rates or battery performanc
   action cards shared with featured tools. Large text stacks the Home actions.
 - Floating reader groups, bookmark actions in overflow, adaptive text clearance,
   scrollable large-text actions, and shared-element motion disabled under reduced motion.
-- Expandable image/PDF previews. The native preview sheet opens the reader through
-  standard navigation; it does not claim a shared element across separate windows.
+- Expandable image/PDF previews in the navigation host, with shared content bounds
+  into the reader. Selected PDF pages carry through; Back and recreation restore the
+  preview. More returns to the same file's actions in the explorer.
+- Consistent file badges, selection and paste panels, search result rows and Settings
+  categories. Search options stay tucked away until requested; narrow windows and
+  large text stack paste actions below their destination.
 - A larger image editing preview, grouped controls and a landscape panel, before/after
   rotation/filter comparison, reset and intentional edit haptics. Crop output is preserved.
 
@@ -65,3 +69,17 @@ visual checks do not establish physical-device frame rates or battery performanc
   three cold launches and native menu interaction succeeded, without another ANR.
   A Home-with-live-backdrop integration test also passed. This does not establish a
   physical-device startup benchmark or attribute the driver stall to the new UI.
+
+## Verification — 2026-11-25
+
+- API 35 emulator: all 54 targeted tests passed on the final UI implementation.
+- Full JVM suite: 668 tests passed. Debug and Android-test builds passed.
+- Lint: no errors, 187 warnings and two hints; existing warnings remain visible.
+- Actual-activity checks cover selected PDF page handoff, Back, recreation and More
+  returning to the same file's actions. A forced page-zero mutation failed the
+  handoff test as expected; the source was restored and the checks passed again.
+- Large-text and RTL checks cover Files, Search, Settings, selection and paste
+  actions. Active transfers disable Paste and expose Details. Format metadata has
+  paragraph-direction and glyph-position regression checks.
+- This pass uses the API 35 emulator as requested. Physical-device frame rate,
+  battery use and startup performance remain unmeasured.

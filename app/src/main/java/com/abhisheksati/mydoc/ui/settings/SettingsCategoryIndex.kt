@@ -1,6 +1,11 @@
 package com.abhisheksati.mydoc.ui.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.runtime.remember
+import com.abhisheksati.mydoc.designsystem.animation.pressScale
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -66,19 +71,22 @@ internal fun SettingsCategoryIndex(onSelect: (SettingsCategory) -> Unit, modifie
                                 SettingsCategory.ABOUT -> colors.inkMuted
                             }
                             if (index > 0) HorizontalDivider(Modifier.padding(horizontal = 16.dp))
-                            ListItem(
-                                headlineContent = { Text(stringResource(category.title)) },
-                                supportingContent = { Text(stringResource(category.summary)) },
-                                leadingContent = {
-                                    Box(Modifier.size(44.dp).background(tone.copy(alpha = 0.14f), CircleShape),
-                                        contentAlignment = Alignment.Center) {
-                                        Icon(category.icon, contentDescription = null, tint = tone)
-                                    }
-                                },
-                                trailingContent = { Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null) },
-                                colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-                                modifier = Modifier.clickable(role = Role.Button) { onSelect(category) }.padding(vertical = 3.dp)
-                            )
+                            val interactions = remember(category) { MutableInteractionSource() }
+                            Row(Modifier.fillMaxWidth().heightIn(min = 80.dp).pressScale(interactions)
+                                .clickable(role = Role.Button, interactionSource = interactions,
+                                    indication = ripple(), onClick = { onSelect(category) }).padding(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.size(44.dp).background(tone.copy(alpha = 0.12f), AppRadius.insetShape),
+                                    contentAlignment = Alignment.Center) {
+                                    Icon(category.icon, contentDescription = null, tint = colors.ink)
+                                }
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(stringResource(category.title), style = AppTheme.typography.bodyLargeStrong, color = colors.ink)
+                                    Text(stringResource(category.summary), style = AppTheme.typography.caption, color = colors.inkSecondary)
+                                }
+                                Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null,
+                                    tint = colors.inkMuted, modifier = Modifier.size(20.dp))
+                            }
                         }
                     }
                 }

@@ -310,6 +310,7 @@ class MainActivity : ComponentActivity() {
                 val video = currentVideo
                 val audio = currentAudio
                 val doc = currentDocument
+                val preview = currentPreview
                 val activeScreen: ActiveScreen = when {
                     !isAppUnlocked && isBiometricLockEnabled -> ActiveScreen.Lock
                     quickScanRequested -> ActiveScreen.Home
@@ -320,7 +321,7 @@ class MainActivity : ComponentActivity() {
                     video != null -> ActiveScreen.Video(video)
                     audio != null -> ActiveScreen.Audio(audio)
                     doc != null -> ActiveScreen.Document(doc)
-                    currentPreview != null -> ActiveScreen.Preview(currentPreview!!)
+                    preview != null -> ActiveScreen.Preview(preview)
                     else -> ActiveScreen.Home
                 }
 

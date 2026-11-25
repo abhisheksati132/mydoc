@@ -1254,4 +1254,13 @@
     <string name="imgpdf_before_adjustments">Before adjustments</string>
     <string name="imgpdf_show_edits">Show edits</string>
     <string name="home_create_or_open">Create or open</string>
+    <string name="search_options">Search options</string>
+    <plurals name="clipboard_copy_ready">
+        <item quantity="one">%1$d item ready to copy</item>
+        <item quantity="other">%1$d items ready to copy</item>
+    </plurals>
+    <plurals name="clipboard_move_ready">
+        <item quantity="one">%1$d item ready to move</item>
+        <item quantity="other">%1$d items ready to move</item>
+    </plurals>
 </resources>

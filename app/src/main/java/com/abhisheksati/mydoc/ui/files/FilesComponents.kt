@@ -67,11 +67,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.draw.clip
+import com.abhisheksati.mydoc.designsystem.components.GlassMaterial
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -99,30 +102,24 @@ fun FilesSectionHeader(
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(start = 20.dp, end = 8.dp, top = 20.dp, bottom = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.weight(1f)
-        )
-        if (meta != null) {
-            Text(
-                text = meta,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(end = 12.dp)
-            )
+    val largeType = LocalDensity.current.fontScale > 1.3f
+    val labels: @Composable () -> Unit = {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(title, style = AppTheme.typography.heading, color = AppTheme.colors.ink,
+                modifier = Modifier.semantics { heading() })
+            if (meta != null) Text(meta, style = AppTheme.typography.metadata, color = AppTheme.colors.inkMuted)
         }
-        if (actionLabel != null && onAction != null) {
-            TextButton(onClick = onAction) {
-                Text(actionLabel, style = MaterialTheme.typography.labelLarge)
-            }
+    }
+    val action: @Composable () -> Unit = {
+        if (actionLabel != null && onAction != null) TextButton(onClick = onAction) { Text(actionLabel) }
+    }
+    val spacing = modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 20.dp, bottom = 4.dp)
+    if (largeType) {
+        Column(spacing, verticalArrangement = Arrangement.spacedBy(4.dp)) { labels(); action() }
+    } else {
+        Row(spacing, verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f)) { labels() }
+            action()
         }
     }
 }
@@ -504,7 +501,7 @@ internal fun FileOverflowButton(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun FileRow(
     item: StorageItem,
@@ -573,16 +570,20 @@ fun FileRow(
                 overflow = TextOverflow.Ellipsis
             )
             Spacer(Modifier.height(2.dp))
-            Text(
-                text = if (item.isDirectory) {
-                    item.formattedSize
-                } else {
-                    listOf(if (showFileSize) item.formattedSize else "", item.formattedLastModified)
-                        .filter { it.isNotBlank() }.joinToString(" · ")
-                },
-                style = AppTheme.typography.caption,
-                color = scheme.onSurfaceVariant
-            )
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                FileFormatBadge(item)
+                Text(
+                    text = if (item.isDirectory) {
+                        item.formattedSize
+                    } else {
+                        listOf(if (showFileSize) item.formattedSize else "", item.formattedLastModified)
+                            .filter { it.isNotBlank() }.joinToString(" · ")
+                    },
+                    style = AppTheme.typography.caption,
+                    color = scheme.onSurfaceVariant,
+                    modifier = Modifier.align(Alignment.CenterVertically)
+                )
+            }
         }
 
         if (isSelectionMode) {
@@ -601,7 +602,7 @@ fun FileRow(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun FileGridCell(
     item: StorageItem,
@@ -618,7 +619,9 @@ fun FileGridCell(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(AppRadius.cardShape)
+            .clip(AppRadius.largeShape)
+            .background(if (isSelected) scheme.primaryContainer else scheme.surface)
+            .border(if (isSelected) 2.dp else 1.dp, if (isSelected) scheme.primary else AppTheme.colors.cardBorder, AppRadius.largeShape)
             .then(
                 if (isSelectionMode) {
                     // R7: `toggleable` is what publishes a checked state to the accessibility layer.
@@ -696,12 +699,16 @@ fun FileGridCell(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
-        Text(
-            text = item.formattedSize,
-            style = MaterialTheme.typography.bodySmall,
-            color = scheme.onSurfaceVariant,
-            maxLines = 1
-        )
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            FileFormatBadge(item)
+            Text(
+                text = item.formattedSize,
+                style = MaterialTheme.typography.bodySmall,
+                color = scheme.onSurfaceVariant,
+                maxLines = 1,
+                modifier = Modifier.align(Alignment.CenterVertically)
+            )
+        }
     }
 }
 
@@ -819,81 +826,84 @@ fun FilesSelectionBar(
     var isMenuOpen by remember { mutableStateOf(false) }
     val hasSelection = selectedCount > 0
 
-    Column(modifier.fillMaxWidth().background(scheme.surfaceContainer).padding(horizontal = 8.dp, vertical = 4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onClose) {
-                Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.cd_close_selection))
-            }
-            Text(pluralStringResource(R.plurals.files_selected_count_plural, selectedCount, selectedCount),
-                style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            if (selectedCount < totalCount) {
-                IconButton(onClick = onSelectAll) {
-                    Icon(Icons.Outlined.SelectAll, contentDescription = stringResource(R.string.cd_select_all))
+    GlassSurface(modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        shape = AppRadius.largeShape, material = GlassMaterial.PANEL, elevation = 1.dp) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onClose) {
+                    Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.cd_close_selection))
                 }
-            }
-            Box {
-                IconButton(onClick = { isMenuOpen = true }, enabled = hasSelection) {
-                    Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.cd_more_actions))
-                }
-                AppDropdownMenu(expanded = isMenuOpen, onDismissRequest = { isMenuOpen = false }) {
-                    if (onMergePdfs != null) {
-                        DropdownMenuItem(text = { Text(stringResource(R.string.library_merge_pdfs)) },
-                            onClick = { isMenuOpen = false; onMergePdfs() })
+                Text(pluralStringResource(R.plurals.files_selected_count_plural, selectedCount, selectedCount),
+                    style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                if (selectedCount < totalCount) {
+                    IconButton(onClick = onSelectAll) {
+                        Icon(Icons.Outlined.SelectAll, contentDescription = stringResource(R.string.cd_select_all))
                     }
-                    if (onConvertToPdf != null) {
+                }
+                Box {
+                    IconButton(onClick = { isMenuOpen = true }, enabled = hasSelection) {
+                        Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.cd_more_actions))
+                    }
+                    AppDropdownMenu(expanded = isMenuOpen, onDismissRequest = { isMenuOpen = false }) {
+                        if (onMergePdfs != null) {
+                            DropdownMenuItem(text = { Text(stringResource(R.string.library_merge_pdfs)) },
+                                onClick = { isMenuOpen = false; onMergePdfs() })
+                        }
+                        if (onConvertToPdf != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.batch_convert_pdf)) },
+                                leadingIcon = { Icon(Icons.Outlined.PictureAsPdf, contentDescription = null) },
+                                onClick = {
+                                    isMenuOpen = false
+                                    onConvertToPdf()
+                                }
+                            )
+                        }
+                        if (onRename != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_rename)) },
+                                leadingIcon = { Icon(Icons.Outlined.DriveFileRenameOutline, contentDescription = null) },
+                                onClick = {
+                                    isMenuOpen = false
+                                    onRename()
+                                }
+                            )
+                        }
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.batch_convert_pdf)) },
-                            leadingIcon = { Icon(Icons.Outlined.PictureAsPdf, contentDescription = null) },
+                            text = { Text(stringResource(R.string.dialog_compress_zip)) },
+                            leadingIcon = { Icon(Icons.Outlined.FolderZip, contentDescription = null) },
                             onClick = {
                                 isMenuOpen = false
-                                onConvertToPdf()
+                                onCompress()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.photo_move_to_bin_title), color = scheme.error) },
+                            leadingIcon = { Icon(Icons.Outlined.Delete, contentDescription = null, tint = scheme.error) },
+                            onClick = {
+                                isMenuOpen = false
+                                onDelete()
                             }
                         )
                     }
-                    if (onRename != null) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_rename)) },
-                            leadingIcon = { Icon(Icons.Outlined.DriveFileRenameOutline, contentDescription = null) },
-                            onClick = {
-                                isMenuOpen = false
-                                onRename()
-                            }
-                        )
-                    }
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.dialog_compress_zip)) },
-                        leadingIcon = { Icon(Icons.Outlined.FolderZip, contentDescription = null) },
-                        onClick = {
-                            isMenuOpen = false
-                            onCompress()
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.photo_move_to_bin_title), color = scheme.error) },
-                        leadingIcon = { Icon(Icons.Outlined.Delete, contentDescription = null, tint = scheme.error) },
-                        onClick = {
-                            isMenuOpen = false
-                            onDelete()
-                        }
-                    )
                 }
             }
-        }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            TextButton(onClick = onCopy, enabled = hasSelection) {
-                Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.action_copy))
-            }
-            TextButton(onClick = onCut, enabled = hasSelection) {
-                Icon(Icons.Outlined.ContentCut, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.action_move))
-            }
-            TextButton(onClick = onShare, enabled = hasSelection) {
-                Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.action_share))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                TextButton(onClick = onCopy, enabled = hasSelection) {
+                    Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.action_copy))
+                }
+                TextButton(onClick = onCut, enabled = hasSelection) {
+                    Icon(Icons.Outlined.ContentCut, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.action_move))
+                }
+                TextButton(onClick = onShare, enabled = hasSelection) {
+                    Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.action_share))
+                }
             }
         }
     }

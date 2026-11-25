@@ -4,7 +4,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import com.abhisheksati.mydoc.R
 import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Tune
+import com.abhisheksati.mydoc.designsystem.animation.AppMotion
+import com.abhisheksati.mydoc.designsystem.animation.itemMotion
+import com.abhisheksati.mydoc.designsystem.motion.LocalReducedMotion
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -69,15 +82,16 @@ fun SpotlightSearchSheet(
     onBrowseFolders: (() -> Unit)? = null,
     initialContents: Boolean = false
 ) {
-    var showContents by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(initialContents) }
+    var showContents by rememberSaveable { mutableStateOf(initialContents) }
+    var query by rememberSaveable { mutableStateOf("") }
+    var selectedFilter by rememberSaveable { mutableStateOf("All") }
+    var showOptions by rememberSaveable { mutableStateOf(false) }
     if (showContents) {
         com.abhisheksati.mydoc.discovery.DiscoveryScreen(onBack = { showContents = false }, onOpen = onItemClick)
         return
     }
     val scheme = MaterialTheme.colorScheme
-    var query by remember { mutableStateOf("") }
-    var selectedFilter by remember { mutableStateOf("All") }
-
+    val reducedMotion = LocalReducedMotion.current
     val context = androidx.compose.ui.platform.LocalContext.current
     val app = context.applicationContext as? com.abhisheksati.mydoc.MyDocApp
     val discoveryStore = remember(app) {
@@ -129,14 +143,28 @@ fun SpotlightSearchSheet(
     ) {
         AppTopBar(title = stringResource(R.string.search_indexed_files), onBack = onDismiss,
             containerColor = scheme.background, isGlass = false)
-        Text(stringResource(R.string.search_index_scope_hint), style = MaterialTheme.typography.bodySmall,
-            color = scheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
-        TextButton(onClick = { showContents = true }, modifier = Modifier.padding(horizontal = 8.dp)) {
-            Text(stringResource(R.string.spotlight_search_subtitle))
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FileSearchField(query, { query = it }, Modifier.weight(1f))
+            Surface(shape = AppRadius.roundShape, color = scheme.surfaceContainerHigh) {
+                IconToggleButton(checked = showOptions, onCheckedChange = { showOptions = it }) {
+                    Icon(Icons.Outlined.Tune, stringResource(R.string.search_options), tint = scheme.onSurface)
+                }
+            }
         }
-        FileSearchField(query, { query = it }, Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
-        if (onBrowseFolders != null) TextButton(onClick = { onDismiss(); onBrowseFolders() }, modifier = Modifier.padding(horizontal = 8.dp)) {
-            Text(stringResource(R.string.home_browse_files))
+        AnimatedVisibility(showOptions,
+            enter = fadeIn(if (reducedMotion) androidx.compose.animation.core.snap() else AppMotion.fadeFast),
+            exit = fadeOut(if (reducedMotion) androidx.compose.animation.core.snap() else AppMotion.fadeFast)) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                Text(stringResource(R.string.search_index_scope_hint), style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant)
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { showContents = true }) { Text(stringResource(R.string.spotlight_search_subtitle)) }
+                    if (onBrowseFolders != null) TextButton(onClick = { onDismiss(); onBrowseFolders() }) {
+                        Text(stringResource(R.string.home_browse_files))
+                    }
+                }
+            }
         }
 
         val filterPills = listOf("All", "PDF", "Word", "Excel", "PPT", "Media")
@@ -151,7 +179,7 @@ fun SpotlightSearchSheet(
                 FilterChip(
                     selected = selectedFilter == label,
                     onClick = { selectedFilter = label },
-                    label = { Text(label) }
+                    label = { Text(if (label == "All") stringResource(R.string.tools_filter_all) else label) }
                 )
             }
         }
@@ -174,6 +202,7 @@ fun SpotlightSearchSheet(
 
         if (filteredItems.isEmpty() && contentHits.isEmpty()) {
             AppEmptyState(
+                modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
                 title = stringResource(
                         if (items.isEmpty()) R.string.search_no_docs
                         else R.string.search_no_matches, query.ifBlank { selectedFilter }
@@ -189,48 +218,16 @@ fun SpotlightSearchSheet(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp)
             ) {
                 items(
                     items = filteredItems,
                     key = { it.identityKey }
                 ) { item ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 10.dp)
-                            .clip(AppRadius.cardShape)
-                            .clickable {
-                                onDismiss()
-                                onItemClick(item)
-                            }
-                            .padding(horizontal = 10.dp, vertical = 9.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        LibraryThumbnail(
-                            item = item,
-                            modifier = Modifier.size(width = 44.dp, height = 52.dp)
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = item.name,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = scheme.onSurface,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = stringResource(R.string.files_item_meta, item.extension.uppercase(), item.formattedSize),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = scheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
+                    SearchResultRow(item = item,
+                        subtitle = stringResource(R.string.files_item_meta, item.extension.uppercase(java.util.Locale.ROOT), item.formattedSize),
+                        onClick = { onDismiss(); onItemClick(item) }, modifier = itemMotion(reducedMotion))
                 }
 
                 if (contentHits.isNotEmpty()) {
@@ -239,7 +236,7 @@ fun SpotlightSearchSheet(
                             text = stringResource(R.string.search_inside_documents),
                             style = MaterialTheme.typography.titleSmall,
                             color = scheme.onSurface,
-                            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 4.dp)
+                            modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 14.dp, bottom = 4.dp)
                         )
                     }
                     items(
@@ -247,51 +244,20 @@ fun SpotlightSearchSheet(
                         key = { "inside_${it.uri}" }
                     ) { hit ->
                         val hitItem = LibraryItem(hit.uri, hit.name, MediaKind.DOCUMENT, hit.mime, hit.size, hit.modified)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 10.dp)
-                                .clip(AppRadius.cardShape)
-                                .clickable {
-                                    coroutineScope.launch {
-                                        app?.documentRepository?.let { repo ->
-                                            runCatching {
-                                                val existing = repo.getViewState(hit.uri)
-                                                repo.saveViewState(
-                                                    (existing ?: ViewState(hit.uri)).copy(lastPage = hit.page)
-                                                )
-                                            }
+                        SearchResultRow(item = hitItem,
+                            subtitle = stringResource(R.string.search_inside_hit, hit.page + 1, hit.snippet),
+                            onClick = {
+                                coroutineScope.launch {
+                                    app?.documentRepository?.let { repo ->
+                                        runCatching {
+                                            val existing = repo.getViewState(hit.uri)
+                                            repo.saveViewState((existing ?: ViewState(hit.uri)).copy(lastPage = hit.page))
                                         }
-                                        onDismiss()
-                                        onItemClick(hitItem)
                                     }
+                                    onDismiss()
+                                    onItemClick(hitItem)
                                 }
-                                .padding(horizontal = 10.dp, vertical = 9.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            LibraryThumbnail(
-                                item = hitItem,
-                                modifier = Modifier.size(width = 44.dp, height = 52.dp)
-                            )
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = hit.name,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = scheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = stringResource(R.string.search_inside_hit, hit.page + 1, hit.snippet),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = scheme.onSurfaceVariant,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
+                            }, modifier = itemMotion(reducedMotion))
                     }
                 }
             }

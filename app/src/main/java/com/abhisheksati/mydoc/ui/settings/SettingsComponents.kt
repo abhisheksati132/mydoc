@@ -1,5 +1,13 @@
 package com.abhisheksati.mydoc.ui.settings
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import kotlin.math.roundToInt
+import androidx.compose.runtime.remember
+import com.abhisheksati.mydoc.designsystem.animation.pressScale
+import com.abhisheksati.mydoc.designsystem.tokens.rememberAppHaptics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.toggleable
@@ -128,16 +136,18 @@ fun SettingToggleRow(
     val scheme = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
 
+    val interactions = remember { MutableInteractionSource() }
     Row(
         modifier = modifier
             .fillMaxWidth()
             // The row is the control. A clickable Row around a live Switch made two focus nodes
             // and two switch states for one setting, so a screen reader announced the pair twice
             // and TalkBack users could toggle the same preference from either node.
-            .clip(AppRadius.insetShape)
+            .pressScale(interactions).clip(AppRadius.insetShape)
             .toggleable(
                 value = checked,
                 role = Role.Switch,
+                interactionSource = interactions, indication = androidx.compose.material3.ripple(),
                 onValueChange = onCheckedChange
             )
             .defaultMinSize(minHeight = 56.dp)
@@ -190,6 +200,11 @@ fun SettingSliderRow(
 ) {
     val scheme = MaterialTheme.colorScheme
 
+    val haptics = rememberAppHaptics()
+    val divisions = steps + 1
+    fun detent(v: Float) = if (valueRange.endInclusive > valueRange.start)
+        (((v - valueRange.start) / (valueRange.endInclusive - valueRange.start)) * divisions).roundToInt() else 0
+    var lastDetent by remember(valueRange, steps) { mutableStateOf(detent(value)) }
     Column(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -220,7 +235,12 @@ fun SettingSliderRow(
         }
         Slider(
             value = value,
-            onValueChange = onValueChange,
+            onValueChange = { next ->
+                val nextDetent = detent(next)
+                if (steps > 0 && nextDetent != lastDetent) haptics.tick()
+                lastDetent = nextDetent
+                onValueChange(next)
+            },
             valueRange = valueRange,
             steps = steps,
             modifier = Modifier.padding(start = 36.dp, top = 6.dp, end = 8.dp)
@@ -229,7 +249,8 @@ fun SettingSliderRow(
 }
 
 @Composable
-internal fun SettingsPageIntro(category: SettingsCategory) {    val scheme = MaterialTheme.colorScheme
+internal fun SettingsPageIntro(category: SettingsCategory) {
+    val scheme = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         shape = AppRadius.xLargeShape,

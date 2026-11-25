@@ -47,4 +47,17 @@ class PreviewReaderNavigationOnDeviceTest {
             file.delete()
         }
     }
+
+    @Test fun moreActionsReturnsToTheSameFileInTheExplorer() {
+        val file = File.createTempFile("preview-actions-", ".txt", compose.activity.cacheDir)
+        file.writeText("Preview action fixture")
+        try {
+            compose.onNodeWithText("Library").performClick()
+            compose.runOnUiThread { compose.activity.showFilePreview(StorageItem(file)) }
+            compose.onNodeWithText("More actions").performClick()
+            compose.waitUntil(15_000) { compose.onAllNodesWithText("Rename").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithText(file.name).assertExists()
+            androidx.test.espresso.Espresso.pressBack()
+        } finally { file.delete() }
+    }
 }
