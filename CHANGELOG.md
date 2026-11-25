@@ -5,6 +5,8 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-11-25
+
 ### Added
 - Glass finish presets (Balanced, Frosted, Clear) and Calm/Expressive touch and menu motion, saved in Appearance settings.
 - Expandable image/PDF previews and before/after comparison with a reset for Image to PDF rotation and filters.
@@ -14,6 +16,9 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 - Home gives the current document a larger cover and defaults recent files to visual previews. Featured tools use clearer category colors and larger illustrations.
 - Reader controls float in compact glass groups. Bookmark actions remain in the reader menu; large text gets scrollable bottom actions and matching document clearance.
 - Image to PDF gives the preview more room and groups editing actions, with a separate controls panel in landscape.
+- File previews open in the navigation host, hand the selected PDF page to the reader, and return to the same preview on Back. More opens the original file's explorer actions.
+- Files use clearer format badges and selection panels. Paste controls stack on narrow screens and at large text sizes while preserving transfer status and disabled actions.
+- Search has consistent cover-led results and expandable options; Settings categories use clearer hierarchy and shared touch feedback.
 
 ## [2.0.18] — 2026-11-24
 

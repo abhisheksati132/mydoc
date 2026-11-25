@@ -19,7 +19,7 @@ Android 8.0+ · 100% on-device · Free and open source · [Changelog](CHANGELOG.
 
 ## One app, three jobs
 
-**New in 2.0.18:** browse PDF pages in Quick Preview, zoom with dedicated controls, and create PDFs in a cleaner image editor with clearer recovery when something goes wrong.
+**New in 2.1.0:** a more expressive Home, glass finishes you can choose, floating reader controls, and previews that carry your selected page straight into reading. Files, Search, and Settings feel more at home together.
 
 | Find it | Read it | Finish it |
 | --- | --- | --- |
