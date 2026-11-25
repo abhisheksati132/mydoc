@@ -50,7 +50,7 @@ class FluidScreensOnDeviceTest {
         compose.onNodeWithContentDescription("Create or open").performClick()
         compose.onAllNodesWithText("Open document").assertCountEquals(2)
         DeviceCaptures.save("fluid-home-create")
-        androidx.test.espresso.Espresso.pressBack()
+        com.abhisheksati.mydoc.testutil.pressSystemBack()
         compose.onNodeWithText("Resume").performClick()
         compose.runOnIdle { assertEquals(document.uri, opened?.uri) }
     }
@@ -87,7 +87,7 @@ class FluidScreensOnDeviceTest {
         } }
         compose.onNodeWithContentDescription("Create or open").assertIsDisplayed().performClick()
         compose.onAllNodesWithText("Open document").assertCountEquals(2)
-        androidx.test.espresso.Espresso.pressBack()
+        com.abhisheksati.mydoc.testutil.pressSystemBack()
         compose.onNodeWithText("Resume").assertIsDisplayed()
     }
 

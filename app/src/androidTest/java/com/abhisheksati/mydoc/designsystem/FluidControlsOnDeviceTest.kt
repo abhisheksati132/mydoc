@@ -84,7 +84,7 @@ class FluidControlsOnDeviceTest {
         } }
         compose.onNodeWithText("Open menu").performClick()
         compose.onNodeWithText("Menu action").assertIsDisplayed()
-        androidx.test.espresso.Espresso.pressBack()
+        com.abhisheksati.mydoc.testutil.pressSystemBack()
         compose.onNodeWithText("Menu action").assertDoesNotExist()
         compose.onNodeWithText("Open menu").performClick()
         compose.onNodeWithText("Menu action").assertIsDisplayed().performClick()

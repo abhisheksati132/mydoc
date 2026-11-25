@@ -57,7 +57,8 @@ class PreviewReaderNavigationOnDeviceTest {
             compose.onNodeWithText("More actions").performClick()
             compose.waitUntil(15_000) { compose.onAllNodesWithText("Rename").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText(file.name).assertExists()
-            androidx.test.espresso.Espresso.pressBack()
+            com.abhisheksati.mydoc.testutil.pressSystemBack()
+            compose.onNodeWithText("Rename").assertDoesNotExist()
         } finally { file.delete() }
     }
 }

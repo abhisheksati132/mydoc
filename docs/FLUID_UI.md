@@ -73,6 +73,11 @@ visual checks do not establish physical-device frame rates or battery performanc
 ## Verification — 2026-11-25
 
 - API 35 emulator: all 54 targeted tests passed on the final UI implementation.
+- The full CI suite exposed two stale layout expectations and four Espresso
+  popup-focus failures. Tests now follow Search options, check the reader's full
+  accessible title, and inject timestamped system Back keys with dismissal/reopen
+  assertions preserved. All 21 tests in the affected classes passed locally with
+  system animations disabled, matching CI.
 - Full JVM suite: 668 tests passed. Debug and Android-test builds passed.
 - Lint: no errors, 187 warnings and two hints; existing warnings remain visible.
 - Actual-activity checks cover selected PDF page handoff, Back, recreation and More

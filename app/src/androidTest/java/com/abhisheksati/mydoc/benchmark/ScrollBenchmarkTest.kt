@@ -38,7 +38,6 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
-import com.abhisheksati.mydoc.designsystem.components.formatMiddleTruncated
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
 import com.abhisheksati.mydoc.designsystem.tokens.AppTheme
 import com.abhisheksati.mydoc.domain.model.LibraryItem
@@ -215,8 +214,8 @@ class ScrollBenchmarkTest {
         }
 
         compose.waitForIdle()
-        // Top bar expanded initially: title is visible, middle-truncated to fit
-        val expandedTitle = formatMiddleTruncated("Quarterly Financial Analysis 2026.pdf", maxChars = 28)
+        // The title keeps its full accessible text while drawing with end ellipsis.
+        val expandedTitle = "Quarterly Financial Analysis 2026.pdf"
         compose.onNodeWithText(expandedTitle).assertIsDisplayed()
 
         val timings = mutableListOf<Long>()

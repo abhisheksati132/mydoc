@@ -109,6 +109,7 @@ class CoreUxOnDeviceTest {
         compose.onNode(hasSetTextAction()).performTextInput("missing")
         compose.onNodeWithText("Clear search and filters").performClick()
         compose.onNodeWithText("report.pdf").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Search options").performClick()
         compose.onNodeWithText("Browse files").performClick()
         compose.runOnIdle { assertEquals(1, browsed); assertEquals(1, dismissed) }
     }
