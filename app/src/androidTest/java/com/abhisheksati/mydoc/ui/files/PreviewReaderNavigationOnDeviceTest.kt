@@ -34,7 +34,11 @@ class PreviewReaderNavigationOnDeviceTest {
             compose.onNodeWithContentDescription("Next preview page").performScrollTo().performClick()
             compose.waitUntil(10_000) { compose.onAllNodesWithText("Page 2 of 2").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("Open").performClick()
-            compose.waitUntil(20_000) { compose.onAllNodesWithContentDescription("Search text in document").fetchSemanticsNodes().isNotEmpty() }
+            // Reader chrome appears before PDF loading restores the page count.
+            // The requested page, rather than Search, establishes readiness.
+            compose.waitUntil(20_000) {
+                runCatching { compose.onNodeWithText("2/2").assertIsDisplayed(); true }.getOrDefault(false)
+            }
             compose.onNodeWithText("2/2").assertIsDisplayed()
             compose.onNodeWithContentDescription("Navigate back").performClick()
             compose.waitUntil(10_000) { compose.onAllNodesWithText("Page 2 of 2").fetchSemanticsNodes().isNotEmpty() }
