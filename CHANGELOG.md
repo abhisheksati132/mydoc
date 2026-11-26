@@ -6,6 +6,7 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 ## [Unreleased]
 
 ### Fixed
+- File-action sheets let long filenames expand and collapse, preserve the expanded state during recreation, and expose action rows as accessible buttons. Short filenames remain compact.
 - Folder breadcrumbs reveal the current folder when navigating deep paths or resizing the window, with a clearer selected state and support for large text and mirrored layouts. Parent folders remain scrollable and actionable.
 
 ## [2.1.0] — 2026-11-25

@@ -1,4 +1,6 @@
 <resources>
+    <string name="file_name_show_full">Show full name</string>
+    <string name="file_name_show_less">Show less</string>
     <string name="tools_featured">Start here</string>
     <string name="word_engine_licenses">Office engine licenses</string>
     <string name="open_source_licenses">Open source licenses</string>
@@ -1247,7 +1249,7 @@
     <string name="settings_motion_style">Motion</string>
     <string name="motion_calm">Calm</string>
     <string name="motion_expressive">Expressive</string>
-    <string name="settings_motion_hint">Touch feedback and menus follow your choice. Your device’s reduced motion setting always takes priority.</string>
+    <string name="settings_motion_hint">Touch feedback and menus follow your choice. Your deviceâ€™s reduced motion setting always takes priority.</string>
     <string name="quick_preview_expand">Expand preview</string>
     <string name="quick_preview_collapse">Reduce preview</string>
     <string name="imgpdf_reset_adjustments">Reset rotation and filter</string>

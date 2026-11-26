@@ -40,7 +40,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.material3.TextButton
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
@@ -80,6 +89,8 @@ fun SingleItemActionBottomSheet(
     val colors = LocalAppColors.current
     val typography = LocalAppTypography.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var showFullName by rememberSaveable(item.path, item.name) { mutableStateOf(false) }
+    var nameTruncated by remember(item.path, item.name) { mutableStateOf(false) }
 
     AppModalSheet(
         onDismissRequest = onDismissRequest,
@@ -129,14 +140,21 @@ fun SingleItemActionBottomSheet(
                         text = item.name,
                         style = typography.documentName,
                         color = colors.ink,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        maxLines = if (showFullName) Int.MAX_VALUE else 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.semantics { heading() },
+                        onTextLayout = { if (!showFullName) nameTruncated = it.hasVisualOverflow }
                     )
                     Text(
                         text = item.formattedSize,
                         style = typography.caption,
                         color = colors.inkMuted
                     )
+                    if (nameTruncated || showFullName) {
+                        TextButton(onClick = { showFullName = !showFullName }) {
+                            Text(stringResource(if (showFullName) R.string.file_name_show_less else R.string.file_name_show_full))
+                        }
+                    }
                 }
             }
 
@@ -252,7 +270,7 @@ fun ItemActionOption(
         modifier = Modifier
             .fillMaxWidth()
             .clip(AppRadius.pillShape)
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .heightIn(min = 48.dp)
             .padding(vertical = 10.dp, horizontal = 8.dp)
     ) {
