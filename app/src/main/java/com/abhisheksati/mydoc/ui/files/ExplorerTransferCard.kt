@@ -10,6 +10,10 @@ import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
@@ -31,6 +35,7 @@ internal fun ExplorerTransferCard(
     onOpenDestination: ((File) -> Unit)? = null
 ) {
     val scheme = MaterialTheme.colorScheme
+    var showAllErrors by rememberSaveable(transfer.id) { mutableStateOf(false) }
     val operation = if (transfer.operation == ClipboardOperation.COPY) R.string.transfers_copy else R.string.transfers_move
     val status = when (transfer.status) {
         TransferStatus.RUNNING -> R.string.transfers_running
@@ -74,15 +79,6 @@ internal fun ExplorerTransferCard(
                     modifier = Modifier.fillMaxWidth()
                 )
             }
-            if (transfer.failed > 0) {
-                failureMessages.forEach { (name, message) ->
-                    Text(name, style = MaterialTheme.typography.titleSmall)
-                    Text(message.resolve(LocalContext.current), style = MaterialTheme.typography.bodySmall)
-                }
-                Text(stringResource(R.string.transfers_failure_help), style = MaterialTheme.typography.bodySmall, color = scheme.error)
-            } else if (transfer.status == TransferStatus.CANCELLED) {
-                Text(stringResource(R.string.transfers_continue_help), style = MaterialTheme.typography.bodySmall)
-            }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (onOpenDestination != null) TextButton(onClick = { onOpenDestination(transfer.destination) }) {
                     Icon(Icons.Outlined.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -92,6 +88,18 @@ internal fun ExplorerTransferCard(
                 if (transfer.running) TextButton(onClick = onStop, enabled = transfer.status != TransferStatus.STOPPING) {
                     Text(stringResource(R.string.transfers_stop))
                 }
+            }
+            if (transfer.failed > 0) {
+                (if (showAllErrors) failureMessages else failureMessages.take(3)).forEach { (name, message) ->
+                    Text(name, style = MaterialTheme.typography.titleSmall)
+                    Text(message.resolve(LocalContext.current), style = MaterialTheme.typography.bodySmall)
+                }
+                if (failureMessages.size > 3) TextButton(onClick = { showAllErrors = !showAllErrors }) {
+                    Text(stringResource(if (showAllErrors) R.string.transfers_show_fewer_errors else R.string.transfers_show_all_errors))
+                }
+                Text(stringResource(R.string.transfers_failure_help), style = MaterialTheme.typography.bodySmall, color = scheme.error)
+            } else if (transfer.status == TransferStatus.CANCELLED) {
+                Text(stringResource(R.string.transfers_continue_help), style = MaterialTheme.typography.bodySmall)
             }
         }
     }

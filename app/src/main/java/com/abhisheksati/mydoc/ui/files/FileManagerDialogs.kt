@@ -18,6 +18,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.Check
@@ -47,7 +50,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abhisheksati.mydoc.R
@@ -70,6 +74,8 @@ fun NewFolderDialog(
     onConfirm: (name: String) -> Unit
 ) {
     var name by rememberSaveable { mutableStateOf("") }
+    val canSubmit = name.trim().isNotEmpty()
+    val submit = { if (canSubmit) onConfirm(name.trim()) }
     val focusRequester = remember { FocusRequester() }
     val colors = LocalAppColors.current
     val isOled = LocalIsOled.current
@@ -89,8 +95,10 @@ fun NewFolderDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    placeholder = { Text(stringResource(R.string.dialog_folder_name)) },
+                    label = { Text(stringResource(R.string.dialog_folder_name)) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { submit() }),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = colors.textPrimary,
                         unfocusedTextColor = colors.textPrimary,
@@ -105,12 +113,8 @@ fun NewFolderDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = {
-                    if (name.trim().isNotEmpty()) {
-                        onConfirm(name.trim())
-                    }
-                },
-                enabled = name.trim().isNotEmpty()
+                onClick = submit,
+                enabled = canSubmit
             ) {
                 Text(stringResource(R.string.action_create), color = if (name.trim().isNotEmpty()) colors.accent else colors.textSecondary)
             }
@@ -129,7 +133,9 @@ fun RenameDialog(
     onDismiss: () -> Unit,
     onConfirm: (newName: String) -> Unit
 ) {
-    var name by rememberSaveable { mutableStateOf(file.name) }
+    var name by rememberSaveable(file.absolutePath) { mutableStateOf(file.name) }
+    val canSubmit = name.trim().isNotEmpty() && name.trim() != file.name
+    val submit = { if (canSubmit) onConfirm(name.trim()) }
     val focusRequester = remember { FocusRequester() }
     val colors = LocalAppColors.current
     val isOled = LocalIsOled.current
@@ -149,7 +155,10 @@ fun RenameDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.file_dialog_new_name)) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { submit() }),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = colors.textPrimary,
                         unfocusedTextColor = colors.textPrimary,
@@ -164,14 +173,10 @@ fun RenameDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = {
-                    if (name.trim().isNotEmpty() && name.trim() != file.name) {
-                        onConfirm(name.trim())
-                    }
-                },
-                enabled = name.trim().isNotEmpty() && name.trim() != file.name
+                onClick = submit,
+                enabled = canSubmit
             ) {
-                Text(stringResource(R.string.action_rename), color = if (name.trim().isNotEmpty()) colors.accent else colors.textSecondary)
+                Text(stringResource(R.string.action_rename), color = if (canSubmit) colors.accent else colors.textSecondary)
             }
         },
         dismissButton = {
@@ -289,13 +294,13 @@ fun FilePropertiesDialog(
                     }
                     IconButton(
                         onClick = { copyToClipboard("Path", file.absolutePath) },
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.ContentCopy,
                             contentDescription = stringResource(R.string.details_copy_path),
                             tint = colors.textSecondary,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
@@ -343,23 +348,21 @@ fun FilePropertiesDialog(
                                 color = colors.textSecondary
                             )
                             Spacer(modifier = Modifier.height(2.dp))
-                            Text(
+                            SelectionContainer { Text(
                                 text = checksum,
-                                style = typography.micro.copy(fontFamily = FontFamily.Monospace),
-                                color = colors.textPrimary,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                                style = typography.caption.copy(fontFamily = FontFamily.Monospace, textDirection = TextDirection.Ltr),
+                                color = colors.textPrimary
+                            ) }
                         }
                         IconButton(
                             onClick = { copyToClipboard("SHA-256", checksum) },
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.ContentCopy,
                                 contentDescription = stringResource(R.string.details_copy_checksum),
                                 tint = colors.textSecondary,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -381,15 +384,15 @@ private fun PropertyItem(title: String, value: String) {
     Column(modifier = Modifier.padding(vertical = 4.dp)) {
         Text(
             text = title,
-            style = typography.micro,
+            style = typography.caption,
             color = colors.textSecondary
         )
         Spacer(modifier = Modifier.height(2.dp))
-        Text(
+        SelectionContainer { Text(
             text = value,
-            style = typography.label,
+            style = typography.body,
             color = colors.textPrimary
-        )
+        ) }
     }
 }
 
@@ -401,7 +404,9 @@ fun CompressDialog(
     onDismiss: () -> Unit,
     onConfirm: (name: String) -> Unit
 ) {
-    var name by rememberSaveable { mutableStateOf(defaultName) }
+    var name by rememberSaveable(defaultName) { mutableStateOf(defaultName) }
+    val canSubmit = name.trim().isNotEmpty()
+    val submit = { if (canSubmit) onConfirm(name.trim()) }
     val focusRequester = remember { FocusRequester() }
     val colors = LocalAppColors.current
     val isOled = LocalIsOled.current
@@ -418,17 +423,14 @@ fun CompressDialog(
         text = {
             OverlaySystemBars()
             Column {
-                Text(
-                    text = stringResource(R.string.dialog_archive_name),
-                    style = LocalAppTypography.current.caption,
-                    color = colors.textSecondary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
                     placeholder = { Text(stringResource(R.string.dialog_archive_name_hint)) },
+                    label = { Text(stringResource(R.string.file_dialog_archive_name)) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { submit() }),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = colors.textPrimary,
                         unfocusedTextColor = colors.textPrimary,
@@ -443,13 +445,10 @@ fun CompressDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = {
-                    if (name.trim().isNotEmpty()) {
-                        onConfirm(name.trim())
-                    }
-                }
+                onClick = submit,
+                enabled = canSubmit
             ) {
-                Text(stringResource(R.string.action_compress), color = colors.accent, style = AppTheme.typography.bodyStrong)
+                Text(stringResource(R.string.action_compress), color = if (canSubmit) colors.accent else colors.textSecondary, style = AppTheme.typography.bodyStrong)
             }
         },
         dismissButton = {

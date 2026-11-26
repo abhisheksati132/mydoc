@@ -6,6 +6,9 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 ## [Unreleased]
 
 ### Fixed
+- File details use readable, selectable values, full wrapping checksums, and 48dp copy controls.
+- Transfer cards show the first three errors with an expand/collapse control; destination and stop actions stay above the error list.
+- Folder, rename, and archive dialogs keep visible field labels and accept valid keyboard submissions. Empty archive names cannot submit, rename drafts reset when selecting another file, and archive drafts survive recreation.
 - File-action sheets let long filenames expand and collapse, preserve the expanded state during recreation, and expose action rows as accessible buttons. Short filenames remain compact.
 - Folder breadcrumbs reveal the current folder when navigating deep paths or resizing the window, with a clearer selected state and support for large text and mirrored layouts. Parent folders remain scrollable and actionable.
 

@@ -22,37 +22,10 @@ import java.io.File
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TestWatcher
-import org.junit.runner.Description
-import androidx.test.platform.app.InstrumentationRegistry
-import android.provider.Settings
-import android.os.ParcelFileDescriptor
-import android.os.SystemClock
 
 class FileActionSheetOnDeviceTest {
-    // Modal windows obtain density from Android, not the parent's LocalDensity override.
-    // Apply the real setting before the Compose rule launches its activity, then restore it.
-    @get:Rule(order = 0) val fontScale = object : TestWatcher() {
-        private var original: Float? = null
-        override fun starting(description: Description) {
-            if (description.methodName == "largeMirroredActionHasButtonSemanticsAndActsOnce") {
-                val context = InstrumentationRegistry.getInstrumentation().targetContext
-                original = Settings.System.getFloat(context.contentResolver, Settings.System.FONT_SCALE, 1f)
-                setScale(2f)
-            }
-        }
-        override fun finished(description: Description) { original?.let { setScale(it) }; original = null }
-        private fun setScale(value: Float) {
-            val instrumentation = InstrumentationRegistry.getInstrumentation()
-            ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(
-                "settings put system font_scale $value")).use { it.readBytes() }
-            val deadline = SystemClock.uptimeMillis() + 5_000
-            while (instrumentation.targetContext.resources.configuration.fontScale != value && SystemClock.uptimeMillis() < deadline) {
-                SystemClock.sleep(50)
-            }
-            assertEquals(value, instrumentation.targetContext.resources.configuration.fontScale, 0.01f)
-        }
-    }
+    @get:Rule(order = 0) val fontScale = com.abhisheksati.mydoc.testutil.AndroidFontScaleRule(
+        onlyTestName = "largeMirroredActionHasButtonSemanticsAndActsOnce")
     @get:Rule(order = 1) val compose = createComposeRule()
     private val longName = "Project reference notes and supporting documents for the November design review final approved version.pdf"
 

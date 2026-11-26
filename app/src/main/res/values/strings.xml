@@ -1,4 +1,8 @@
 <resources>
+    <string name="file_dialog_new_name">New name</string>
+    <string name="file_dialog_archive_name">Archive name</string>
+    <string name="transfers_show_all_errors">Show all errors</string>
+    <string name="transfers_show_fewer_errors">Show fewer errors</string>
     <string name="file_name_show_full">Show full name</string>
     <string name="file_name_show_less">Show less</string>
     <string name="tools_featured">Start here</string>
@@ -73,7 +77,6 @@
     <string name="details_checksum">SHA-256 Checksum</string>
     <string name="details_copy_checksum">Copy Checksum</string>
     <string name="dialog_compress_zip">Compress to ZIP</string>
-    <string name="dialog_archive_name">Enter archive name:</string>
     <string name="files_title_library">Library</string>
     <string name="files_title_internal">Internal storage</string>
     <string name="storage_internal_title">Internal Storage</string>
