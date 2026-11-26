@@ -5,6 +5,9 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+### Fixed
+- Folder breadcrumbs reveal the current folder when navigating deep paths or resizing the window, with a clearer selected state and support for large text and mirrored layouts. Parent folders remain scrollable and actionable.
+
 ## [2.1.0] — 2026-11-25
 
 ### Added

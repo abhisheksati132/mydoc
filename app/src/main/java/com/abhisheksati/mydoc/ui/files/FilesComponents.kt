@@ -70,10 +70,12 @@ import androidx.compose.ui.draw.clip
 import com.abhisheksati.mydoc.designsystem.components.GlassMaterial
 import com.abhisheksati.mydoc.designsystem.components.GlassSurface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Modifier
@@ -915,10 +917,16 @@ fun BreadcrumbRow(
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
+    val scrollState = rememberScrollState()
+    // Labels identify navigation changes; callback instances change on recomposition.
+    // A new width also reveals the destination after rotation or a text-size change.
+    LaunchedEffect(crumbs.map { it.first }, scrollState.maxValue) {
+        if (scrollState.maxValue != Int.MAX_VALUE) scrollState.scrollTo(scrollState.maxValue)
+    }
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
+            .horizontalScroll(scrollState)
             .padding(horizontal = 20.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -927,11 +935,13 @@ fun BreadcrumbRow(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge,
-                color = if (isLast) scheme.onSurface else scheme.onSurfaceVariant,
+                color = if (isLast) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
                 modifier = Modifier
                     .defaultMinSize(minHeight = 48.dp)
                     .clip(AppRadius.microShape)
-                    .clickable(onClick = onClick)
+                    .background(if (isLast) scheme.secondaryContainer else Color.Transparent)
+                    .semantics { selected = isLast }
+                    .clickable(role = Role.Button, onClick = onClick)
                     .wrapContentHeight(Alignment.CenterVertically)
                     .padding(horizontal = 8.dp, vertical = 6.dp)
             )
