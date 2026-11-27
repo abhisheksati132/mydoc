@@ -2,6 +2,7 @@ package com.abhisheksati.mydoc.ui.files
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import com.abhisheksati.mydoc.data.archive.*
 import com.abhisheksati.mydoc.designsystem.tokens.AppDesignSystemTheme
@@ -44,8 +45,10 @@ class ArchiveWorkspaceOnDeviceTest {
             compose.onNodeWithText("7Z").performClick()
             compose.onNodeWithText("Password (optional)").performTextInput("fixture-password")
             compose.onNode(hasText("Encrypt filenames") and isToggleable()).performScrollTo().assertIsOff().performClick().assertIsOn()
-            val bounds = compose.onNode(hasText("Encrypt filenames") and isToggleable()).fetchSemanticsNode().boundsInRoot
-            assertTrue(bounds.height >= 48 * context.resources.displayMetrics.density)
+            // IME/viewport clipping is not the control's layout size. Measure
+            // the full target in Compose dp, as the other touch-target tests do.
+            compose.onNode(hasText("Encrypt filenames") and isToggleable())
+                .assertIsDisplayed().assertHeightIsAtLeast(48.dp)
         } finally { root.deleteRecursively() }
     }
 
