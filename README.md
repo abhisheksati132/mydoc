@@ -19,11 +19,11 @@ Android 8.0+ · 100% on-device · Free and open source · [Changelog](CHANGELOG.
 
 ## One app, three jobs
 
-**New in 2.1.0:** a more expressive Home, glass finishes you can choose, floating reader controls, and previews that carry your selected page straight into reading. Files, Search, and Settings feel more at home together.
+**New in 2.2.0:** an archive workspace built for more. Create encrypted ZIPs and 7z files, browse RAR and TAR archives, extract just what you need, and edit a verified copy while keeping your original. Background tasks let you keep moving.
 
 | Find it | Read it | Finish it |
 | --- | --- | --- |
-| Pinned folders, saved searches, document and media categories, date-grouped photos, previews, and browsing inside ZIP archives. | PDF, Word, Excel, PowerPoint, EPUB, and text — with recents, restored reading positions, bookmarks, outline, search, and format-aware controls. | Scan pages, merge and reorder, compress, sign, or pull text out of a scan with the bundled OCR. |
+| Pinned folders, saved searches, document and media categories, date-grouped photos, previews, and browsing inside ZIP, 7z, RAR and TAR archives. | PDF, Word, Excel, PowerPoint, EPUB, and text — with recents, restored reading positions, bookmarks, outline, search, and format-aware controls. | Scan pages, merge and reorder, compress, sign, or pull text out of a scan with the bundled OCR. |
 
 Also inside: a local media player (tracks, external subtitles, speed, A–B loop, HTTPS playback) and a storage view that shows what fills your phone and moves files to the Recycle Bin instead of deleting them.
 

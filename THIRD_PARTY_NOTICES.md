@@ -14,6 +14,12 @@ it as well.
 
 ## Components linked into the app
 
+### 7-Zip archive engine
+- **Version**: 26.06; copyright Igor Pavlov and the contributors named in the upstream license.
+- **Use**: A separate installed executable for local archive creation, browsing, extraction and integrity checks. RAR support is decompression only.
+- **Licenses**: GNU LGPL 2.1 or later, BSD 3-clause portions and the unRAR restriction, as detailed in the [upstream license](third_party/7zip/LICENSE.txt). The license and complete LGPL text ship under `assets/licences/7zip`.
+- **Corresponding source and modifications**: The pinned, unmodified source archive, digest and Android build changes are documented in [engine provenance](third_party/7zip/README.md) and implemented in [the build script](scripts/build-archive-engine.py). MyDoc's process-entry shim and safe file helper are included in this repository.
+
 ### LibreOfficeKit Word engine
 - **Version**: 26.2.6.3; copyright LibreOffice contributors and The Document Foundation.
 - **Use**: Full offline Word-family page conversion in a dedicated process, with bundled fonts and native dependencies (including NSS/NSPR and SQLite).

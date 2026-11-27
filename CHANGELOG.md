@@ -5,6 +5,8 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+## [2.2.0] — 2026-11-27
+
 ### Added
 - Archive workspace powered by the version-pinned 7-Zip 26.06 engine, built from bundled source for all four Android architectures.
 - ZIP, 7z, TAR, TAR.GZ, TAR.BZ2 and TAR.XZ creation with compression presets, solid 7z, dictionary/thread controls, AES ZIP, encrypted 7z filenames and split volumes.
@@ -18,6 +20,9 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 - Folder, rename, and archive dialogs keep visible field labels and accept valid keyboard submissions. Empty archive names cannot submit, rename drafts reset when selecting another file, and archive drafts survive recreation.
 - File-action sheets let long filenames expand and collapse, preserve the expanded state during recreation, and expose action rows as accessible buttons. Short filenames remain compact.
 - Folder breadcrumbs reveal the current folder when navigating deep paths or resizing the window, with a clearer selected state and support for large text and mirrored layouts. Parent folders remain scrollable and actionable.
+
+### Limits
+- Archive tasks currently allow 10,000 entries and 512 MiB of expanded data. RAR creation and generic repair are unavailable. Pause/resume applies to a running engine; interrupted tasks restart from the beginning.
 
 ## [2.1.0] — 2026-11-25
 
