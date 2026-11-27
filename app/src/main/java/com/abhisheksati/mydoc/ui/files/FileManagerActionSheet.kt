@@ -221,10 +221,10 @@ fun SingleItemActionBottomSheet(
                 )
             }
 
-            val isZip = item.name.endsWith(".zip", ignoreCase = true) || item.name.endsWith(".jar", ignoreCase = true)
+            val isZip = item.file.isSupportedArchive()
             if (isZip) {
                 ItemActionOption(
-                    title = stringResource(R.string.action_extract_zip),
+                    title = stringResource(R.string.arc_browse),
                     icon = Icons.Outlined.FolderZip,
                     tint = colors.accent,
                     onClick = onExtractZip
@@ -232,7 +232,7 @@ fun SingleItemActionBottomSheet(
             }
 
             ItemActionOption(
-                title = stringResource(R.string.dialog_compress_zip),
+                title = stringResource(R.string.arc_create),
                 icon = Icons.Outlined.Archive,
                 onClick = onCompressToZip
             )

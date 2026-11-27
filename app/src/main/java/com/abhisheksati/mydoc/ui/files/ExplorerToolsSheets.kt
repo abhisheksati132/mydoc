@@ -29,7 +29,7 @@ import com.abhisheksati.mydoc.domain.model.*
 import kotlinx.coroutines.CancellationException
 import java.io.File
 
-private val StringSetSaver = Saver<Set<String>, ArrayList<String>>(
+internal val StringSetSaver = Saver<Set<String>, ArrayList<String>>(
     save = { ArrayList(it) },
     restore = { it.toSet() }
 )
@@ -167,11 +167,14 @@ fun ExplorerFolderInsightsSheet(directory: File, onDismiss: () -> Unit, onOpenFo
 @Composable
 fun ExplorerTransfersSheet(center: ExplorerTransfers, onOpenDestination: ((File) -> Unit)? = null, onDismiss: () -> Unit) {
     val transfers by center.state.collectAsState()
+    var archivesOpen by remember { mutableStateOf(false) }
+    if (archivesOpen) ArchiveJobsSheet { archivesOpen = false }
     AppModalSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(0.8f).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 Text(stringResource(R.string.transfers_title), style = MaterialTheme.typography.headlineSmall)
                 Text(stringResource(R.string.transfers_scope), style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = { archivesOpen = true }) { Text(stringResource(R.string.arc_jobs)) }
                 TextButton(onClick = center::clearFinished, enabled = transfers.any { !it.running }) { Text(stringResource(R.string.transfers_clear)) }
             }
             if (transfers.isEmpty()) item { Text(stringResource(R.string.transfers_empty)) }

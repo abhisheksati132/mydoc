@@ -5,6 +5,13 @@ versions follow the `versionName` in `app/build.gradle.kts`.
 
 ## [Unreleased]
 
+### Added
+- Archive workspace powered by the version-pinned 7-Zip 26.06 engine, built from bundled source for all four Android architectures.
+- ZIP, 7z, TAR, TAR.GZ, TAR.BZ2 and TAR.XZ creation with compression presets, solid 7z, dictionary/thread controls, AES ZIP, encrypted 7z filenames and split volumes.
+- Archive navigation, whole-archive search, sorting, multiple selection, selected extraction, previews and nested archive opening; RAR and multipart RAR extraction are supported.
+- Choose an extraction folder and keep both or skip existing names. ZIP/7z editing saves a verified copy with add, replace, rename and remove actions while retaining the original.
+- Queued archive tasks with background notifications, progress, integrity checks, engine pause/resume, cancellation and private history. Passwords are kept out of persistent history and process arguments.
+
 ### Fixed
 - File details use readable, selectable values, full wrapping checksums, and 48dp copy controls.
 - Transfer cards show the first three errors with an expand/collapse control; destination and stop actions stay above the error list.

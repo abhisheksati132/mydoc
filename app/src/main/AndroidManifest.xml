@@ -20,6 +20,7 @@
     <!-- Read-aloud playback outside the app (lock screen / background) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <!-- Storage permissions for accessing documents across device storage -->
@@ -203,6 +204,10 @@
         </receiver>
 
         <!-- Read-aloud foreground service with lock-screen media controls -->
+        <service
+            android:name=".data.archive.ArchiveJobService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
         <service
             android:name=".tools.tts.TtsPlaybackService"
             android:exported="false"

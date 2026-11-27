@@ -15,6 +15,11 @@ plugins {
 val APP_VERSION_NAME = "2.1.0"
 val APP_VERSION_CODE = 209  // Increment by 1 every release, never decrease
 
+abstract class ArchiveEngineBuildTask : Exec() {
+    @get:org.gradle.api.tasks.OutputDirectory
+    abstract val libraryDirectory: org.gradle.api.file.DirectoryProperty
+}
+
 android {
     namespace = "com.abhisheksati.mydoc"
     // AndroidX 2026 releases (camera 1.6, media3 1.11, lifecycle 2.11) publish AAR
@@ -139,6 +144,32 @@ android {
             isUniversalApk = true
         }
     }
+}
+
+val archiveEngineAbis = providers.gradleProperty("mydoc.archive.abis")
+    .orElse("arm64-v8a,armeabi-v7a,x86,x86_64").get().split(',')
+val allArchiveAbis = setOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+require(archiveEngineAbis.isNotEmpty() && archiveEngineAbis.all { it in allArchiveAbis })
+if (gradle.startParameter.taskNames.any { it.contains("release", ignoreCase = true) }) {
+    require(archiveEngineAbis.toSet() == allArchiveAbis) { "Release builds require every archive-engine ABI" }
+}
+val buildArchiveEngine = tasks.register<ArchiveEngineBuildTask>("buildArchiveEngine") {
+    inputs.files(rootProject.file("scripts/build-archive-engine.py"),
+        rootProject.file("third_party/7zip/7z2606-src.tar.xz"), file("src/main/cpp/archive_entry.cpp"),
+        file("src/main/cpp/archive_bridge.h"), file("src/main/cpp/archive_files.c"))
+    inputs.property("abis", archiveEngineAbis)
+    inputs.property("ndkVersion", android.ndkVersion.orEmpty())
+    inputs.file(androidComponents.sdkComponents.ndkDirectory.map { it.file("source.properties") })
+        .withPropertyName("archiveNdkToolchain")
+    libraryDirectory.set(layout.buildDirectory.dir("generated/archive-engine/jniLibs"))
+    commandLine(listOf("python", rootProject.file("scripts/build-archive-engine.py").absolutePath,
+        "--sdk", androidComponents.sdkComponents.sdkDirectory.get().asFile.absolutePath,
+        "--ndk-version", android.ndkVersion.orEmpty(),
+        "--output", layout.buildDirectory.dir("generated/archive-engine/jniLibs").get().asFile.absolutePath) +
+        archiveEngineAbis.flatMap { listOf("--abi", it) })
+}
+androidComponents.onVariants { variant ->
+    variant.sources.jniLibs?.addGeneratedSourceDirectory(buildArchiveEngine) { it.libraryDirectory }
 }
 
 dependencies {

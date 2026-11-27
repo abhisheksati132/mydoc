@@ -10,6 +10,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -19,6 +21,10 @@ import com.abhisheksati.mydoc.designsystem.components.AppAlertDialog
 
 @Composable
 internal fun OpenSourceLicensesDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val archiveLicense = remember { listOf("LICENSE.txt", "COPYING.txt").joinToString("\n\n") { name ->
+        context.assets.open("licences/7zip/$name").bufferedReader().use { it.readText() }
+    } }
     AppAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.open_source_licenses)) },
@@ -90,6 +96,9 @@ internal fun OpenSourceLicensesDialog(onDismiss: () -> Unit) {
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
+                Text("7-Zip 26.06", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Text("Source and Android build modifications: https://github.com/abhisheksati132/mydoc/tree/main/third_party/7zip\n\n" + archiveLicense,
+                    style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 16.dp))
                 Text(
                     text = "- AndroidX Jetpack, Compose, Material 3, CameraX, Media3 (Apache 2.0)\n" +
                         "- Kotlin Coroutines, Serialization (Apache 2.0)\n" +

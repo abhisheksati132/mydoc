@@ -872,7 +872,7 @@ fun FilesSelectionBar(
                             )
                         }
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.dialog_compress_zip)) },
+                            text = { Text(stringResource(R.string.arc_create)) },
                             leadingIcon = { Icon(Icons.Outlined.FolderZip, contentDescription = null) },
                             onClick = {
                                 isMenuOpen = false

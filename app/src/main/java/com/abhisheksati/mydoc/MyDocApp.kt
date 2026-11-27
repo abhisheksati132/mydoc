@@ -43,6 +43,7 @@ class MyDocApp : Application(), ImageLoaderFactory {
         private set
 
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    val archiveJobs by lazy { com.abhisheksati.mydoc.data.archive.ArchiveJobs(this) }
 
     override fun onCreate() {
         super.onCreate()

@@ -41,6 +41,13 @@ fun FileManagerOverlays(
 ) {
     val context = LocalContext.current
     var singleItemPendingDelete by remember { mutableStateOf<File?>(null) }
+    var archiveCreateTarget by remember { mutableStateOf<File?>(null) }
+    var archiveJobsOpen by remember { mutableStateOf(false) }
+    if (archiveJobsOpen) ArchiveJobsSheet { archiveJobsOpen = false; viewModel.refreshCurrentSource() }
+    archiveCreateTarget?.let { file ->
+        ArchiveCreateSheet(listOf(file), file.parentFile ?: uiState.currentDirectory,
+            onDismiss = { archiveCreateTarget = null }, onQueued = { archiveCreateTarget = null; archiveJobsOpen = true })
+    }
 
     singleItemPendingDelete?.let { file ->
         DeleteConfirmationDialog(
@@ -97,26 +104,23 @@ fun FileManagerOverlays(
     }
 
     if (showCompressDialog) {
-        val defaultName = if (uiState.selectedFiles.size == 1) {
-            "${uiState.selectedFiles.first().nameWithoutExtension}.zip"
-        } else "Archive.zip"
-        CompressDialog(
-            defaultName = defaultName,
+        ArchiveCreateSheet(
+            sources = uiState.selectedFiles.toList(), parent = uiState.currentDirectory,
             onDismiss = onDismissCompress,
-            onConfirm = { name ->
+            onQueued = {
                 onDismissCompress()
-                viewModel.compressSelected(name)
+                archiveJobsOpen = true
             }
         )
     }
 
     singleItemCompressTarget?.let { file ->
-        CompressDialog(
-            defaultName = "${file.nameWithoutExtension}.zip",
+        ArchiveCreateSheet(
+            sources = listOf(file), parent = file.parentFile ?: uiState.currentDirectory,
             onDismiss = onDismissSingleCompress,
-            onConfirm = { name ->
+            onQueued = {
                 onDismissSingleCompress()
-                viewModel.compressSingle(file, name)
+                archiveJobsOpen = true
             }
         )
     }
@@ -193,11 +197,11 @@ fun FileManagerOverlays(
             },
             onExtractZip = {
                 onDismissSingleItemAction()
-                viewModel.extractArchive(item.file)
+                onOpenFile(item.file)
             },
             onCompressToZip = {
                 onDismissSingleItemAction()
-                viewModel.compressSingle(item.file, "${item.file.nameWithoutExtension}.zip")
+                archiveCreateTarget = item.file
             },
             onDetails = {
                 onDismissSingleItemAction()

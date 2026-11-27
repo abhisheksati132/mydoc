@@ -158,6 +158,10 @@ fun FilesPaneScreen(
     val storageUiState by storageViewModel.uiState.collectAsState()
     val homeUiState by homeViewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val archiveJobs by remember(context) { com.abhisheksati.mydoc.data.archive.ArchiveJobs.get(context).state }.collectAsState()
+    LaunchedEffect(archiveJobs.count { it.status == com.abhisheksati.mydoc.data.archive.ArchiveJobStatus.COMPLETED }) {
+        viewModel.refreshCurrentSource()
+    }
 
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
     var showNewFolderDialog by rememberSaveable { mutableStateOf(false) }
@@ -365,8 +369,8 @@ fun FilesPaneScreen(
     val openStorageItem: (StorageItem) -> Unit = { item ->
         when {
             item.isDirectory -> viewModel.loadDirectory(item.file)
-            item.name.endsWith(".zip", ignoreCase = true) -> archiveTarget = item.file
-            item.fileType == StorageFileType.ARCHIVE -> actionTarget = item
+            item.file.isSupportedArchive() -> archiveTarget = item.file
+            item.fileType == StorageFileType.ARCHIVE -> archiveTarget = item.file
             item.fileType == StorageFileType.IMAGE -> {
                 val siblingImages = uiState.filteredItems
                     .filter { it.fileType == StorageFileType.IMAGE }
@@ -650,7 +654,7 @@ fun FilesPaneScreen(
         singleItemActionTarget = actionTarget,
         onDismissSingleItemAction = { actionTarget = null },
         onRequestRename = { renameTarget = it },
-        onOpenFile = { file -> if (file.extension.equals("zip", true)) archiveTarget = file else onOpenFile(file, null) },
+        onOpenFile = { file -> if (file.isSupportedArchive()) archiveTarget = file else onOpenFile(file, null) },
         onOpenInTools = onOpenInTools,
         onRequestPreview = { item ->
             if (onPreviewFile != null && !item.isDirectory && item.fileType != StorageFileType.ARCHIVE) onPreviewFile(item)
@@ -669,16 +673,13 @@ fun FilesPaneScreen(
     }
 
     archiveTarget?.let { archive ->
-        DisposableEffect(archive) { onDispose { viewModel.cancelArchivePreview() } }
-        ExplorerArchiveSheet(archive,
-        onDismiss = { viewModel.cancelArchivePreview(); archiveTarget = null },
-        onExtract = { archiveTarget = null; viewModel.extractArchive(archive) },
-        canExtract = uiState.activeOperation == null && !isTransferring,
-        onOpenMember = { member, stamp -> viewModel.openArchiveMember(archive, member, File(context.cacheDir, "shared/archive-previews"), stamp) { prepared ->
+        ArchiveWorkspaceSheet(archive,
+        onDismiss = { archiveTarget = null },
+        onChanged = viewModel::refreshCurrentSource,
+        onOpenMember = { prepared ->
             archiveTarget = null
-            if (prepared.extension.equals("zip", true)) archiveTarget = prepared else onOpenFile(prepared, null)
-        } },
-        onExtractSelected = { selected, stamp -> archiveTarget = null; viewModel.extractArchiveSelection(archive, selected, stamp) }) }
+            if (prepared.isSupportedArchive()) archiveTarget = prepared else onOpenFile(prepared, null)
+        }) }
     if (showFolderInsights) ExplorerFolderInsightsSheet(uiState.currentDirectory,
         onDismiss = { showFolderInsights = false },
         onOpenFolder = { folder -> showFolderInsights = false; viewModel.loadDirectory(folder) })
